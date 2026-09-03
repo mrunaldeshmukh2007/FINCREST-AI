@@ -1,8 +1,9 @@
+import React from "react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import {
-  Search, Filter, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
-  ArrowDownRight, Sparkles, ChevronLeft, ChevronRight, X, FileText,
+  Search, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
+  ArrowDownRight, Sparkles, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/SectionHeading';
 import { Button } from '@/components/ui/Button';
@@ -186,30 +187,159 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function AddModal({ onClose }: { onClose: () => void }) {
+  const [description, setDescription] = React.useState("");
+  const [amount, setAmount] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!description.trim() || !amount) {
+      alert("Please enter description and amount.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/expenses/predict/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            description: description.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Prediction failed");
+      }
+
+      console.log("ML Prediction:", data);
+
+      alert(
+        `Expense added!\n\nDescription: ${description}\nAmount: ₹${amount}\nCategory: ${data.category}`
+      );
+
+      onClose();
+    } catch (error) {
+      console.error("Prediction error:", error);
+      alert("Could not connect to the ML service.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={onClose}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+    >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative w-full max-w-md glass-strong gradient-border rounded-3xl p-6" onClick={(e) => e.stopPropagation()}>
+
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="relative w-full max-w-md rounded-2xl p-6"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Add Transaction</h3>
-          <button onClick={onClose}><X className="w-5 h-5" /></button>
+          <h3
+            className="text-lg font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Add Transaction
+          </h3>
+
+          <button
+            onClick={onClose}
+            className="w-5 h-5"
+          >
+            X
+          </button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onClose(); }} className="space-y-3">
-          <input placeholder="Merchant" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+
+          {/* Description */}
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Merchant"
+            className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none"
+            style={{ color: "var(--text-primary)" }}
+          />
+
           <div className="grid grid-cols-2 gap-3">
-            <select className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
+
+            {/* Type */}
+            <select
+              className="glass rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={{ color: "var(--text-primary)" }}
+            >
               <option className="bg-slate-900">Expense</option>
               <option className="bg-slate-900">Income</option>
             </select>
-            <select className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
-              {['Food', 'Shopping', 'Bills', 'Travel', 'Salary', 'Investments'].map(c => <option key={c} className="bg-slate-900">{c}</option>)}
+
+            {/* Category */}
+            <select
+              className="glass rounded-xl px-4 py-2.5 text-sm outline-none"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <option className="bg-slate-900">AI Auto Detect</option>
+              {[
+                "Food",
+                "Shopping",
+                "Bills",
+                "Travel",
+                "Salary",
+                "Investments",
+              ].map((c) => (
+                <option key={c} className="bg-slate-900">
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
-          <input type="number" placeholder="Amount (₹)" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
-          <select className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
-            {['UPI', 'Card', 'Bank Transfer', 'Cash', 'Wallet'].map(m => <option key={m} className="bg-slate-900">{m}</option>)}
+
+          {/* Amount */}
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount (₹)"
+            className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none"
+            style={{ color: "var(--text-primary)" }}
+          />
+
+          {/* Payment method */}
+          <select
+            className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {["UPI", "Card", "Bank Transfer", "Cash", "Wallet"].map((m) => (
+              <option key={m} className="bg-slate-900">
+                {m}
+              </option>
+            ))}
           </select>
-          <Button type="submit" className="w-full" icon={<Plus className="w-4 h-4" />}>Add Transaction</Button>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            {loading ? "Predicting..." : "Add Transaction"}
+          </Button>
+
         </form>
       </motion.div>
     </motion.div>

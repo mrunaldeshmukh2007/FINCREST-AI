@@ -1,0 +1,85 @@
+description,category
+Swiggy food order,Food
+Zomato restaurant order,Food
+McDonalds dinner,Food
+Pizza Hut order,Food
+Dominos pizza,Food
+Starbucks coffee,Food
+restaurant dinner,Food
+lunch at restaurant,Food
+breakfast at cafe,Food
+grocery store purchase,Food
+food delivery,Food
+dinner order,Food
+Uber ride,Transport
+Ola cab ride,Transport
+Uber auto ride,Transport
+Ola auto ride,Transport
+Rapido bike ride,Transport
+bus ticket,Transport
+train ticket,Transport
+metro ticket,Transport
+petrol payment,Transport
+fuel station payment,Transport
+cab to college,Transport
+auto rickshaw fare,Transport
+Amazon purchase,Shopping
+Flipkart order,Shopping
+Myntra clothes,Shopping
+new shoes purchase,Shopping
+clothing purchase,Shopping
+shopping mall purchase,Shopping
+new shirt purchase,Shopping
+online shopping,Shopping
+Amazon electronics,Shopping
+purchase of headphones,Shopping
+new bag purchase,Shopping
+clothes shopping,Shopping
+electricity bill,Bills
+water bill,Bills
+gas bill,Bills
+internet bill,Bills
+mobile recharge,Bills
+Jio recharge,Bills
+Airtel recharge,Bills
+electricity payment,Bills
+rent payment,Bills
+DTH recharge,Bills
+broadband payment,Bills
+phone bill,Bills
+Netflix subscription,Entertainment
+Amazon Prime subscription,Entertainment
+Disney Hotstar subscription,Entertainment
+movie ticket,Entertainment
+cinema ticket,Entertainment
+concert ticket,Entertainment
+Spotify subscription,Entertainment
+YouTube Premium subscription,Entertainment
+gaming purchase,Entertainment
+video game purchase,Entertainment
+music subscription,Entertainment
+movie booking,Entertainment
+doctor consultation,Healthcare
+hospital bill,Healthcare
+pharmacy purchase,Healthcare
+medicine purchase,Healthcare
+medical test,Healthcare
+health checkup,Healthcare
+dentist appointment,Healthcare
+doctor fee,Healthcare
+medical consultation,Healthcare
+chemist purchase,Healthcare
+prescription medicine,Healthcare
+hospital payment,Healthcare
+college fees,Education
+university fees,Education
+course payment,Education
+online course,Education
+Udemy course,Education
+Coursera subscription,Education
+college books,Education
+textbook purchase,Education
+exam fees,Education
+tuition fees,Education
+school fees,Education
+educational materials,Education

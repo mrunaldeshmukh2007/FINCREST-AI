@@ -148,15 +148,18 @@ export default function LandingPage() {
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="mt-6 text-lg md:text-xl max-w-2xl mx-auto"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Stop tracking yesterday's expenses.
-            Start predicting tomorrow's wealth.
-            FinTwin AI creates an intelligent Digital Twin of your finances to simulate decisions, forecast future wealth, optimize spending, and help you achieve financial freedom with confidence.
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, delay: 0.3 }}
+  className="mt-6 text-lg md:text-xl max-w-2xl mx-auto"
+  style={{ color: 'var(--text-secondary)' }}
+>
+  Stop tracking yesterday's expenses.
+  <br />
+  Start predicting tomorrow's wealth.
+  <br />
+  FinTwin AI creates an intelligent Digital Twin of your finances to simulate decisions, forecast future wealth, optimize spending, and help you achieve financial freedom with confidence.
+</motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
