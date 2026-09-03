@@ -6,6 +6,9 @@ from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Sum
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Transaction
 
 
@@ -97,6 +100,8 @@ def login(request):
 
 
 @csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_transaction(request):
     if request.method != 'POST':
         return JsonResponse({
@@ -149,6 +154,8 @@ def add_transaction(request):
             'error': 'Invalid JSON.'
         }, status=400)
 @csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_transactions(request):
     if request.method != 'GET':
         return JsonResponse({
@@ -188,6 +195,8 @@ def get_transactions(request):
             'error': 'User not found.'
         }, status=404)
 @csrf_exempt
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_transaction(request, transaction_id):
     if request.method != 'DELETE':
         return JsonResponse({
@@ -207,6 +216,8 @@ def delete_transaction(request, transaction_id):
             'error': 'Transaction not found.'
         }, status=404)
 @csrf_exempt
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def update_transaction(request, transaction_id):
     if request.method != 'PUT':
         return JsonResponse({
@@ -258,7 +269,9 @@ def update_transaction(request, transaction_id):
         return JsonResponse({
             'error': 'Invalid JSON.'
         }, status=400)
-    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def transaction_summary(request):
     if request.method != 'GET':
         return JsonResponse({
