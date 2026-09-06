@@ -9,7 +9,7 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Transaction, Budget, SavingsGoal, Receipt, ReceiptItem
+from .models import Transaction, Budget, SavingsGoal, Receipt, ReceiptItem, Notification, Insight, ChatMessage
 
 
 def test_api(request):
@@ -310,7 +310,7 @@ def transaction_summary(request):
         return JsonResponse({
             'error': 'User not found.'
         }, status=404)
-    
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_budget(request):
@@ -418,6 +418,7 @@ def delete_budget(request, budget_id):
         return JsonResponse({
             'error': 'Budget not found.'
         }, status=404)
+    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_savings_goal(request):
@@ -515,7 +516,6 @@ def update_savings_goal(request, goal_id):
         return JsonResponse({
             'error': 'Savings goal not found.'
         }, status=404)  
-      
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_savings_goal(request, goal_id):
@@ -557,7 +557,6 @@ def add_receipt(request):
         return JsonResponse({
             'error': 'User not found.'
         }, status=404)       
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_receipts(request):
@@ -594,7 +593,6 @@ def get_receipts(request):
         return JsonResponse({
             'error': 'User not found.'
         }, status=404)
-    
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_receipt(request, receipt_id):
@@ -629,7 +627,6 @@ def update_receipt(request, receipt_id):
         return JsonResponse({
             'error': 'Receipt not found.'
         }, status=404) 
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_receipt(request, receipt_id):
@@ -668,7 +665,6 @@ def add_receipt_item(request):
         return JsonResponse({
             'error': 'Receipt not found.'
         }, status=404) 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_receipt_items(request, receipt_id):
@@ -694,7 +690,6 @@ def get_receipt_items(request, receipt_id):
         return JsonResponse({
             'error': 'Receipt not found.'
         }, status=404)  
-
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_receipt_item(request, item_id):
@@ -720,7 +715,6 @@ def update_receipt_item(request, item_id):
         return JsonResponse({
             'error': 'Receipt item not found.'
         }, status=404)  
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_receipt_item(request, item_id):
@@ -735,4 +729,308 @@ def delete_receipt_item(request, item_id):
     except ReceiptItem.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt item not found.'
-        }, status=404)                 
+        }, status=404)    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_notification(request):
+    try:
+        user = User.objects.get(id=request.data.get('user_id'))
+
+        notification = Notification.objects.create(
+            user=user,
+            type=request.data.get('type'),
+            title=request.data.get('title'),
+            message=request.data.get('message'),
+            read=request.data.get('read', False)
+        )
+
+        return JsonResponse({
+            'message': 'Notification added successfully!',
+            'notification_id': notification.id
+        }, status=201)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404) 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_notifications(request):
+    user_id = request.GET.get('user_id')
+
+    if not user_id:
+        return JsonResponse({
+            'error': 'User ID is required.'
+        }, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+
+        notifications = Notification.objects.filter(
+            user=user
+        ).order_by('-created_at')
+
+        notification_list = []
+
+        for notification in notifications:
+            notification_list.append({
+                'id': notification.id,
+                'type': notification.type,
+                'title': notification.title,
+                'message': notification.message,
+                'read': notification.read,
+                'created_at': str(notification.created_at)
+            })
+
+        return JsonResponse({
+            'notifications': notification_list
+        }, status=200)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_notification(request, notification_id):
+    try:
+        notification = Notification.objects.get(id=notification_id)
+
+        if request.data.get('type') is not None:
+            notification.type = request.data.get('type')
+
+        if request.data.get('title') is not None:
+            notification.title = request.data.get('title')
+
+        if request.data.get('message') is not None:
+            notification.message = request.data.get('message')
+
+        if request.data.get('read') is not None:
+            notification.read = request.data.get('read')
+
+        notification.save()
+
+        return JsonResponse({
+            'message': 'Notification updated successfully!'
+        }, status=200)
+
+    except Notification.DoesNotExist:
+        return JsonResponse({
+            'error': 'Notification not found.'
+        }, status=404)   
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_notification(request, notification_id):
+    try:
+        notification = Notification.objects.get(id=notification_id)
+        notification.delete()
+
+        return JsonResponse({
+            'message': 'Notification deleted successfully!'
+        }, status=200)
+
+    except Notification.DoesNotExist:
+        return JsonResponse({
+            'error': 'Notification not found.'
+        }, status=404)  
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_insight(request):
+    try:
+        user = User.objects.get(id=request.data.get('user_id'))
+
+        insight = Insight.objects.create(
+            user=user,
+            type=request.data.get('type'),
+            title=request.data.get('title'),
+            message=request.data.get('message'),
+            is_read=request.data.get('is_read', False)
+        )
+
+        return JsonResponse({
+            'message': 'Insight added successfully!',
+            'insight_id': insight.id
+        }, status=201)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_insights(request):
+    user_id = request.GET.get('user_id')
+
+    if not user_id:
+        return JsonResponse({
+            'error': 'User ID is required.'
+        }, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+
+        insights = Insight.objects.filter(
+            user=user
+        ).order_by('-created_at')
+
+        insight_list = []
+
+        for insight in insights:
+            insight_list.append({
+                'id': insight.id,
+                'type': insight.type,
+                'title': insight.title,
+                'message': insight.message,
+                'is_read': insight.is_read,
+                'created_at': str(insight.created_at)
+            })
+
+        return JsonResponse({
+            'insights': insight_list
+        }, status=200)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404)    
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_insight(request, insight_id):
+    try:
+        insight = Insight.objects.get(id=insight_id)
+
+        if request.data.get('type') is not None:
+            insight.type = request.data.get('type')
+
+        if request.data.get('title') is not None:
+            insight.title = request.data.get('title')
+
+        if request.data.get('message') is not None:
+            insight.message = request.data.get('message')
+
+        if request.data.get('is_read') is not None:
+            insight.is_read = request.data.get('is_read')
+
+        insight.save()
+
+        return JsonResponse({
+            'message': 'Insight updated successfully!'
+        }, status=200)
+
+    except Insight.DoesNotExist:
+        return JsonResponse({
+            'error': 'Insight not found.'
+        }, status=404)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_insight(request, insight_id):
+    try:
+        insight = Insight.objects.get(id=insight_id)
+        insight.delete()
+
+        return JsonResponse({
+            'message': 'Insight deleted successfully!'
+        }, status=200)
+
+    except Insight.DoesNotExist:
+        return JsonResponse({
+            'error': 'Insight not found.'
+        }, status=404)  
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_chat_message(request):
+    try:
+        user = User.objects.get(id=request.data.get('user_id'))
+
+        chat_message = ChatMessage.objects.create(
+            user=user,
+            role=request.data.get('role'),
+            text=request.data.get('text')
+        )
+
+        return JsonResponse({
+            'message': 'Chat message added successfully!',
+            'chat_message_id': chat_message.id
+        }, status=201)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_messages(request):
+    user_id = request.GET.get('user_id')
+
+    if not user_id:
+        return JsonResponse({
+            'error': 'User ID is required.'
+        }, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+
+        messages = ChatMessage.objects.filter(
+            user=user
+        ).order_by('created_at')
+
+        message_list = []
+
+        for message in messages:
+            message_list.append({
+                'id': message.id,
+                'role': message.role,
+                'text': message.text,
+                'created_at': str(message.created_at)
+            })
+
+        return JsonResponse({
+            'chat_messages': message_list
+        }, status=200)
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            'error': 'User not found.'
+        }, status=404)    
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_chat_message(request, chat_message_id):
+    try:
+        message = ChatMessage.objects.get(id=chat_message_id)
+
+        if request.data.get('role') is not None:
+            message.role = request.data.get('role')
+
+        if request.data.get('text') is not None:
+            message.text = request.data.get('text')
+
+        message.save()
+
+        return JsonResponse({
+            'message': 'Chat message updated successfully!'
+        }, status=200)
+
+    except ChatMessage.DoesNotExist:
+        return JsonResponse({
+            'error': 'Chat message not found.'
+        }, status=404)  
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_chat_message(request, chat_message_id):
+    try:
+        message = ChatMessage.objects.get(id=chat_message_id)
+
+        message.delete()
+
+        return JsonResponse({
+            'message': 'Chat message deleted successfully!'
+        }, status=200)
+
+    except ChatMessage.DoesNotExist:
+        return JsonResponse({
+            'error': 'Chat message not found.'
+        }, status=404)      

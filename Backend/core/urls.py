@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import test_api, signup, login, add_transaction, get_transactions, delete_transaction, update_transaction, transaction_summary, add_budget, get_budgets, update_budget, delete_budget, add_savings_goal, get_savings_goals, update_savings_goal, delete_savings_goal, add_receipt, get_receipts, update_receipt, delete_receipt, add_receipt_item, get_receipt_items, update_receipt_item, delete_receipt_item
+from .views import test_api, signup, login, add_transaction, get_transactions, delete_transaction, update_transaction, transaction_summary, add_budget, get_budgets, update_budget, delete_budget, add_savings_goal, get_savings_goals, update_savings_goal, delete_savings_goal, add_receipt, get_receipts, update_receipt, delete_receipt, add_receipt_item, get_receipt_items, update_receipt_item, delete_receipt_item, add_notification, get_notifications, update_notification, delete_notification, add_insight, get_insights, update_insight, delete_insight, add_chat_message, get_chat_messages, update_chat_message, delete_chat_message
 
 urlpatterns = [
     path('signup/', signup),
@@ -34,4 +34,19 @@ urlpatterns = [
     path('receipt-item/<int:receipt_id>/', get_receipt_items),
     path('receipt-item/<int:item_id>/update/', update_receipt_item),
     path('receipt-item/<int:item_id>/delete/', delete_receipt_item),
+
+    path('notifications/add/', add_notification),
+    path('notifications/', get_notifications),
+    path('notifications/<int:notification_id>/update/', update_notification),
+    path('notifications/<int:notification_id>/delete/', delete_notification),
+
+    path('insights/add/', add_insight),
+    path('insights/', get_insights),
+    path('insights/<int:insight_id>/update/', update_insight),
+    path('insights/<int:insight_id>/delete/', delete_insight),
+
+    path('chat-messages/add/', add_chat_message),
+    path('chat-messages/', get_chat_messages),
+    path('chat-messages/<int:chat_message_id>/update/', update_chat_message),
+    path('chat-messages/<int:chat_message_id>/delete/', delete_chat_message),
 ]
