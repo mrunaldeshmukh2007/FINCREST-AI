@@ -157,43 +157,28 @@ def add_transaction(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_transactions(request):
-    if request.method != 'GET':
-        return JsonResponse({
-            'error': 'Only GET requests are allowed.'
-        }, status=405)
 
-    user_id = request.GET.get('user_id')
+    transactions = Transaction.objects.filter(
+        user=request.user
+    ).order_by('-date')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+   
+    transaction_list = [] 
 
-    try:
-        user = User.objects.get(id=user_id)
+    for transaction in transactions:
+        transaction_list.append({
+            'id': transaction.id,
+            'amount': str(transaction.amount),
+            'transaction_type': transaction.transaction_type,
+            'category': transaction.category,
+            'description': transaction.description,
+            'date': str(transaction.date)
+        })
 
-        transactions = Transaction.objects.filter(user=user).order_by('-date')
+    return JsonResponse({
+        'transactions': transaction_list
+    }, status=200)
 
-        transaction_list = []
-
-        for transaction in transactions:
-            transaction_list.append({
-                'id': transaction.id,
-                'amount': str(transaction.amount),
-                'transaction_type': transaction.transaction_type,
-                'category': transaction.category,
-                'description': transaction.description,
-                'date': str(transaction.date)
-            })
-
-        return JsonResponse({
-            'transactions': transaction_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
 @csrf_exempt
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -204,7 +189,11 @@ def delete_transaction(request, transaction_id):
         }, status=405)
 
     try:
-        transaction = Transaction.objects.get(id=transaction_id)
+        transaction = Transaction.objects.get(
+            id=transaction_id,
+            user=request.user
+        )
+
         transaction.delete()
 
         return JsonResponse({
@@ -215,6 +204,7 @@ def delete_transaction(request, transaction_id):
         return JsonResponse({
             'error': 'Transaction not found.'
         }, status=404)
+    
 @csrf_exempt
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -225,7 +215,10 @@ def update_transaction(request, transaction_id):
         }, status=405)
 
     try:
-        transaction = Transaction.objects.get(id=transaction_id)
+        transaction = Transaction.objects.get(
+            id=transaction_id,
+            user=request.user
+        )    
 
         data = json.loads(request.body)
 
@@ -315,10 +308,8 @@ def transaction_summary(request):
 @permission_classes([IsAuthenticated])
 def add_budget(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         budget = Budget.objects.create(
-            user=user,
+            user=request.user,
             category=request.data.get('category'),
             amount_limit=request.data.get('amount_limit'),
             start_date=request.data.get('start_date'),
@@ -330,51 +321,45 @@ def add_budget(request):
             'budget_id': budget.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
-    
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_budgets(request):
-    user_id = request.GET.get('user_id')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    budgets = Budget.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
-    try:
-        user = User.objects.get(id=user_id)
+    budget_list = []
 
-        budgets = Budget.objects.filter(user=user).order_by('-created_at')
+    for budget in budgets:
+        budget_list.append({
+            'id': budget.id,
+            'category': budget.category,
+            'amount_limit': str(budget.amount_limit),
+            'start_date': str(budget.start_date),
+            'end_date': str(budget.end_date),
+            'created_at': str(budget.created_at)
+        })
 
-        budget_list = []
+    return JsonResponse({
+        'budgets': budget_list
+    }, status=200)
 
-        for budget in budgets:
-            budget_list.append({
-                'id': budget.id,
-                'category': budget.category,
-                'amount_limit': str(budget.amount_limit),
-                'start_date': str(budget.start_date),
-                'end_date': str(budget.end_date),
-                'created_at': str(budget.created_at)
-            })
 
-        return JsonResponse({
-            'budgets': budget_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_budget(request, budget_id):
     try:
-        budget = Budget.objects.get(id=budget_id)
+        budget = Budget.objects.get(
+            id=budget_id,
+            user=request.user
+        )
 
         category = request.data.get('category')
         amount_limit = request.data.get('amount_limit')
@@ -402,12 +387,18 @@ def update_budget(request, budget_id):
     except Budget.DoesNotExist:
         return JsonResponse({
             'error': 'Budget not found.'
-        }, status=404)  
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_budget(request, budget_id):
     try:
-        budget = Budget.objects.get(id=budget_id)
+        budget = Budget.objects.get(
+            id=budget_id,
+            user=request.user
+        )
+
         budget.delete()
 
         return JsonResponse({
@@ -423,10 +414,8 @@ def delete_budget(request, budget_id):
 @permission_classes([IsAuthenticated])
 def add_savings_goal(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         goal = SavingsGoal.objects.create(
-            user=user,
+            user=request.user,
             name=request.data.get('name'),
             target_amount=request.data.get('target_amount'),
             saved_amount=request.data.get('saved_amount'),
@@ -439,51 +428,45 @@ def add_savings_goal(request):
             'goal_id': goal.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404) 
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_savings_goals(request):
-    user_id = request.GET.get('user_id')
+    goals = SavingsGoal.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    goal_list = []
 
-    try:
-        user = User.objects.get(id=user_id)
+    for goal in goals:
+        goal_list.append({
+            'id': goal.id,
+            'name': goal.name,
+            'target_amount': str(goal.target_amount),
+            'saved_amount': str(goal.saved_amount),
+            'monthly_contribution': str(goal.monthly_contribution),
+            'target_date': str(goal.target_date),
+            'created_at': str(goal.created_at)
+        })
 
-        goals = SavingsGoal.objects.filter(user=user).order_by('-created_at')
+    return JsonResponse({
+        'savings_goals': goal_list
+    }, status=200)
 
-        goal_list = []
 
-        for goal in goals:
-            goal_list.append({
-                'id': goal.id,
-                'name': goal.name,
-                'target_amount': str(goal.target_amount),
-                'saved_amount': str(goal.saved_amount),
-                'monthly_contribution': str(goal.monthly_contribution),
-                'target_date': str(goal.target_date),
-                'created_at': str(goal.created_at)
-            })
-
-        return JsonResponse({
-            'savings_goals': goal_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404) 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_savings_goal(request, goal_id):
     try:
-        goal = SavingsGoal.objects.get(id=goal_id)
+        goal = SavingsGoal.objects.get(
+            id=goal_id,
+            user=request.user
+        )
 
         name = request.data.get('name')
         target_amount = request.data.get('target_amount')
@@ -515,12 +498,18 @@ def update_savings_goal(request, goal_id):
     except SavingsGoal.DoesNotExist:
         return JsonResponse({
             'error': 'Savings goal not found.'
-        }, status=404)  
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_savings_goal(request, goal_id):
     try:
-        goal = SavingsGoal.objects.get(id=goal_id)
+        goal = SavingsGoal.objects.get(
+            id=goal_id,
+            user=request.user
+        )
+
         goal.delete()
 
         return JsonResponse({
@@ -530,16 +519,14 @@ def delete_savings_goal(request, goal_id):
     except SavingsGoal.DoesNotExist:
         return JsonResponse({
             'error': 'Savings goal not found.'
-        }, status=404)   
+        }, status=404)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_receipt(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         receipt = Receipt.objects.create(
-            user=user,
+            user=request.user,
             merchant=request.data.get('merchant'),
             receipt_date=request.data.get('receipt_date'),
             gst_amount=request.data.get('gst_amount'),
@@ -553,51 +540,46 @@ def add_receipt(request):
             'receipt_id': receipt.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)       
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_receipts(request):
-    user_id = request.GET.get('user_id')
+    receipts = Receipt.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    receipt_list = []
 
-    try:
-        user = User.objects.get(id=user_id)
-        receipts = Receipt.objects.filter(user=user).order_by('-created_at')
+    for receipt in receipts:
+        receipt_list.append({
+            'id': receipt.id,
+            'merchant': receipt.merchant,
+            'receipt_date': str(receipt.receipt_date),
+            'gst_amount': str(receipt.gst_amount),
+            'total_amount': str(receipt.total_amount),
+            'category': receipt.category,
+            'confidence': str(receipt.confidence),
+            'created_at': str(receipt.created_at)
+        })
 
-        receipt_list = []
+    return JsonResponse({
+        'receipts': receipt_list
+    }, status=200)
 
-        for receipt in receipts:
-            receipt_list.append({
-                'id': receipt.id,
-                'merchant': receipt.merchant,
-                'receipt_date': str(receipt.receipt_date),
-                'gst_amount': str(receipt.gst_amount),
-                'total_amount': str(receipt.total_amount),
-                'category': receipt.category,
-                'confidence': str(receipt.confidence),
-                'created_at': str(receipt.created_at)
-            })
 
-        return JsonResponse({
-            'receipts': receipt_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_receipt(request, receipt_id):
     try:
-        receipt = Receipt.objects.get(id=receipt_id)
+        receipt = Receipt.objects.get(
+            id=receipt_id,
+            user=request.user
+        )
 
         if request.data.get('merchant') is not None:
             receipt.merchant = request.data.get('merchant')
@@ -626,12 +608,18 @@ def update_receipt(request, receipt_id):
     except Receipt.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt not found.'
-        }, status=404) 
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_receipt(request, receipt_id):
     try:
-        receipt = Receipt.objects.get(id=receipt_id)
+        receipt = Receipt.objects.get(
+            id=receipt_id,
+            user=request.user
+        )
+
         receipt.delete()
 
         return JsonResponse({
@@ -641,13 +629,16 @@ def delete_receipt(request, receipt_id):
     except Receipt.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt not found.'
-        }, status=404)   
+        }, status=404)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_receipt_item(request):
     try:
-        receipt = Receipt.objects.get(id=request.data.get('receipt_id'))
+        receipt = Receipt.objects.get(
+            id=request.data.get('receipt_id'),
+            user=request.user
+        )
 
         item = ReceiptItem.objects.create(
             receipt=receipt,
@@ -664,13 +655,21 @@ def add_receipt_item(request):
     except Receipt.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt not found.'
-        }, status=404) 
+        }, status=404)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_receipt_items(request, receipt_id):
     try:
-        receipt = Receipt.objects.get(id=receipt_id)
-        items = ReceiptItem.objects.filter(receipt=receipt)
+        receipt = Receipt.objects.get(
+            id=receipt_id,
+            user=request.user
+        )
+
+        items = ReceiptItem.objects.filter(
+            receipt=receipt
+        )
 
         item_list = []
 
@@ -689,12 +688,17 @@ def get_receipt_items(request, receipt_id):
     except Receipt.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt not found.'
-        }, status=404)  
+        }, status=404)
+
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_receipt_item(request, item_id):
     try:
-        item = ReceiptItem.objects.get(id=item_id)
+        item = ReceiptItem.objects.get(
+            id=item_id,
+            receipt__user=request.user
+        )
 
         if request.data.get('name') is not None:
             item.name = request.data.get('name')
@@ -714,12 +718,18 @@ def update_receipt_item(request, item_id):
     except ReceiptItem.DoesNotExist:
         return JsonResponse({
             'error': 'Receipt item not found.'
-        }, status=404)  
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_receipt_item(request, item_id):
     try:
-        item = ReceiptItem.objects.get(id=item_id)
+        item = ReceiptItem.objects.get(
+            id=item_id,
+            receipt__user=request.user
+        )
+
         item.delete()
 
         return JsonResponse({
@@ -735,10 +745,8 @@ def delete_receipt_item(request, item_id):
 @permission_classes([IsAuthenticated])
 def add_notification(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         notification = Notification.objects.create(
-            user=user,
+            user=request.user,
             type=request.data.get('type'),
             title=request.data.get('title'),
             message=request.data.get('message'),
@@ -750,52 +758,44 @@ def add_notification(request):
             'notification_id': notification.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404) 
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notifications(request):
-    user_id = request.GET.get('user_id')
+    notifications = Notification.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    notification_list = []
 
-    try:
-        user = User.objects.get(id=user_id)
+    for notification in notifications:
+        notification_list.append({
+            'id': notification.id,
+            'type': notification.type,
+            'title': notification.title,
+            'message': notification.message,
+            'read': notification.read,
+            'created_at': str(notification.created_at)
+        })
 
-        notifications = Notification.objects.filter(
-            user=user
-        ).order_by('-created_at')
+    return JsonResponse({
+        'notifications': notification_list
+    }, status=200)
 
-        notification_list = []
 
-        for notification in notifications:
-            notification_list.append({
-                'id': notification.id,
-                'type': notification.type,
-                'title': notification.title,
-                'message': notification.message,
-                'read': notification.read,
-                'created_at': str(notification.created_at)
-            })
-
-        return JsonResponse({
-            'notifications': notification_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_notification(request, notification_id):
     try:
-        notification = Notification.objects.get(id=notification_id)
+        notification = Notification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
 
         if request.data.get('type') is not None:
             notification.type = request.data.get('type')
@@ -818,12 +818,18 @@ def update_notification(request, notification_id):
     except Notification.DoesNotExist:
         return JsonResponse({
             'error': 'Notification not found.'
-        }, status=404)   
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_notification(request, notification_id):
     try:
-        notification = Notification.objects.get(id=notification_id)
+        notification = Notification.objects.get(
+            id=notification_id,
+            user=request.user
+        )
+
         notification.delete()
 
         return JsonResponse({
@@ -840,10 +846,8 @@ def delete_notification(request, notification_id):
 @permission_classes([IsAuthenticated])
 def add_insight(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         insight = Insight.objects.create(
-            user=user,
+            user=request.user,
             type=request.data.get('type'),
             title=request.data.get('title'),
             message=request.data.get('message'),
@@ -855,52 +859,44 @@ def add_insight(request):
             'insight_id': insight.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_insights(request):
-    user_id = request.GET.get('user_id')
+    insights = Insight.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    insight_list = []
 
-    try:
-        user = User.objects.get(id=user_id)
+    for insight in insights:
+        insight_list.append({
+            'id': insight.id,
+            'type': insight.type,
+            'title': insight.title,
+            'message': insight.message,
+            'is_read': insight.is_read,
+            'created_at': str(insight.created_at)
+        })
 
-        insights = Insight.objects.filter(
-            user=user
-        ).order_by('-created_at')
+    return JsonResponse({
+        'insights': insight_list
+    }, status=200)
 
-        insight_list = []
 
-        for insight in insights:
-            insight_list.append({
-                'id': insight.id,
-                'type': insight.type,
-                'title': insight.title,
-                'message': insight.message,
-                'is_read': insight.is_read,
-                'created_at': str(insight.created_at)
-            })
-
-        return JsonResponse({
-            'insights': insight_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)    
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_insight(request, insight_id):
     try:
-        insight = Insight.objects.get(id=insight_id)
+        insight = Insight.objects.get(
+            id=insight_id,
+            user=request.user
+        )
 
         if request.data.get('type') is not None:
             insight.type = request.data.get('type')
@@ -924,11 +920,17 @@ def update_insight(request, insight_id):
         return JsonResponse({
             'error': 'Insight not found.'
         }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_insight(request, insight_id):
     try:
-        insight = Insight.objects.get(id=insight_id)
+        insight = Insight.objects.get(
+            id=insight_id,
+            user=request.user
+        )
+
         insight.delete()
 
         return JsonResponse({
@@ -938,16 +940,15 @@ def delete_insight(request, insight_id):
     except Insight.DoesNotExist:
         return JsonResponse({
             'error': 'Insight not found.'
-        }, status=404)  
+        }, status=404)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_chat_message(request):
     try:
-        user = User.objects.get(id=request.data.get('user_id'))
-
         chat_message = ChatMessage.objects.create(
-            user=user,
+            user=request.user,
             role=request.data.get('role'),
             text=request.data.get('text')
         )
@@ -957,50 +958,42 @@ def add_chat_message(request):
             'chat_message_id': chat_message.id
         }, status=201)
 
-    except User.DoesNotExist:
+    except Exception as e:
         return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
+            'error': str(e)
+        }, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_chat_messages(request):
-    user_id = request.GET.get('user_id')
+    messages = ChatMessage.objects.filter(
+        user=request.user
+    ).order_by('created_at')
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    message_list = []
 
-    try:
-        user = User.objects.get(id=user_id)
+    for message in messages:
+        message_list.append({
+            'id': message.id,
+            'role': message.role,
+            'text': message.text,
+            'created_at': str(message.created_at)
+        })
 
-        messages = ChatMessage.objects.filter(
-            user=user
-        ).order_by('created_at')
+    return JsonResponse({
+        'chat_messages': message_list
+    }, status=200)
 
-        message_list = []
 
-        for message in messages:
-            message_list.append({
-                'id': message.id,
-                'role': message.role,
-                'text': message.text,
-                'created_at': str(message.created_at)
-            })
-
-        return JsonResponse({
-            'chat_messages': message_list
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)    
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_chat_message(request, chat_message_id):
     try:
-        message = ChatMessage.objects.get(id=chat_message_id)
+        message = ChatMessage.objects.get(
+            id=chat_message_id,
+            user=request.user
+        )
 
         if request.data.get('role') is not None:
             message.role = request.data.get('role')
@@ -1017,12 +1010,17 @@ def update_chat_message(request, chat_message_id):
     except ChatMessage.DoesNotExist:
         return JsonResponse({
             'error': 'Chat message not found.'
-        }, status=404)  
+        }, status=404)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_chat_message(request, chat_message_id):
     try:
-        message = ChatMessage.objects.get(id=chat_message_id)
+        message = ChatMessage.objects.get(
+            id=chat_message_id,
+            user=request.user
+        )
 
         message.delete()
 
@@ -1033,4 +1031,4 @@ def delete_chat_message(request, chat_message_id):
     except ChatMessage.DoesNotExist:
         return JsonResponse({
             'error': 'Chat message not found.'
-        }, status=404)      
+        }, status=404)
