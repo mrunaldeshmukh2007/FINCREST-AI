@@ -7,12 +7,30 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadialBarChart, RadialBar,
 } from 'recharts';
+import { useEffect, useState } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/SectionHeading';
 import { monthlyIncome, cashFlow, categoryDistribution, healthTrend, transactions } from '@/lib/data';
 import { formatINR } from '@/lib/utils';
+import { fetchDashboardSummary, DashboardSummary } from '@/services/dashboardService';
 
 export default function DashboardHome() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchDashboardSummary().then((data) => {
+      if (isMounted) {
+        setSummary(data);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -25,19 +43,19 @@ export default function DashboardHome() {
           <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center"><Brain className="w-5 h-5 text-emerald-400" /></div>
           <div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Health Score</p>
-            <p className="text-lg font-bold text-gradient-emerald">84<span className="text-sm" style={{ color: 'var(--text-muted)' }}>/100</span></p>
+            <p className="text-lg font-bold text-gradient-emerald">{summary?.aiHealthScore ?? '—'}<span className="text-sm" style={{ color: 'var(--text-muted)' }}>{summary?.aiHealthScore !== null && summary?.aiHealthScore !== undefined ? '/100' : ''}</span></p>
           </div>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard label="Current Balance" value={482350} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={{ value: 12, positive: true }} delay={0} />
-        <StatCard label="Monthly Income" value={230000} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={{ value: 8, positive: true }} delay={0.05} />
-        <StatCard label="Monthly Expense" value={142000} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={{ value: 5, positive: false }} delay={0.1} />
-        <StatCard label="Total Savings" value={388000} icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" trend={{ value: 15, positive: true }} delay={0.15} />
-        <StatCard label="Investments" value={165000} icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" trend={{ value: 22, positive: true }} delay={0.2} />
-        <StatCard label="AI Health Score" value={84} format="plain" icon={<Brain className="w-5 h-5" />} gradient="linear-gradient(135deg,#F59E0B,#EF4444)" delay={0.25} />
+        <StatCard label="Current Balance" value={summary?.currentBalance ?? null} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={summary?.currentBalanceTrend ?? null} delay={0} />
+        <StatCard label="Monthly Income" value={summary?.monthlyIncome ?? null} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={summary?.monthlyIncomeTrend ?? null} delay={0.05} />
+        <StatCard label="Monthly Expense" value={summary?.monthlyExpense ?? null} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={summary?.monthlyExpenseTrend ?? null} delay={0.1} />
+        <StatCard label="Total Savings" value={summary?.totalSavings ?? null} icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" trend={summary?.totalSavingsTrend ?? null} delay={0.15} />
+        <StatCard label="Investments" value={summary?.investments ?? null} icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" trend={summary?.investmentsTrend ?? null} delay={0.2} />
+        <StatCard label="AI Health Score" value={summary?.aiHealthScore ?? null} format="plain" icon={<Brain className="w-5 h-5" />} gradient="linear-gradient(135deg,#F59E0B,#EF4444)" delay={0.25} />
       </div>
 
       {/* Charts row */}

@@ -4,17 +4,19 @@ import { useCountUp, formatINR } from '@/lib/utils';
 
 interface StatCardProps {
   label: string;
-  value: number;
+  value: number | null | undefined;
   format?: 'inr' | 'percent' | 'plain';
   icon: ReactNode;
   gradient: string;
-  trend?: { value: number; positive: boolean };
+  trend?: { value: number; positive: boolean } | null;
   delay?: number;
 }
 
 export function StatCard({ label, value, format = 'inr', icon, gradient, trend, delay = 0 }: StatCardProps) {
-  const animated = useCountUp(value, 1800);
+  const isUnavailable = value === null || value === undefined;
+  const animated = useCountUp(isUnavailable ? 0 : value, 1800);
   const display =
+    isUnavailable ? '—' :
     format === 'inr' ? formatINR(animated, true) :
     format === 'percent' ? `${animated.toFixed(0)}%` :
     animated.toFixed(0);
@@ -32,7 +34,7 @@ export function StatCard({ label, value, format = 'inr', icon, gradient, trend, 
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white`} style={{ background: gradient }}>
           {icon}
         </div>
-        {trend && (
+        {!isUnavailable && trend && (
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${trend.positive ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
             {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}%
           </span>

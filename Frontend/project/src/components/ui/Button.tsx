@@ -7,11 +7,12 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
   type?: 'button' | 'submit';
+  disabled?: boolean;
   className?: string;
   icon?: ReactNode;
 }
 
-export function Button({ children, variant = 'primary', size = 'md', onClick, type = 'button', className = '', icon }: ButtonProps) {
+export function Button({ children, variant = 'primary', size = 'md', onClick, type = 'button', disabled = false, className = '', icon }: ButtonProps) {
   const sizes = {
     sm: 'px-4 py-2 text-sm',
     md: 'px-6 py-2.5 text-sm',
@@ -30,6 +31,7 @@ export function Button({ children, variant = 'primary', size = 'md', onClick, ty
       whileTap={{ scale: 0.97 }}
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={`inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all ${sizes[size]} ${variants[variant]} ${className}`}
     >
       {icon}
