@@ -111,16 +111,15 @@ def add_transaction(request):
     try:
         data = json.loads(request.body)
 
-        user_id = data.get('user_id')
         amount = data.get('amount')
         transaction_type = data.get('transaction_type', '').strip()
         category = data.get('category', '').strip()
         description = data.get('description', '').strip()
         date = data.get('date')
 
-        if not user_id or not amount or not transaction_type or not category or not date:
+        if not amount or not transaction_type or not category or not date:
             return JsonResponse({
-                'error': 'User ID, amount, transaction type, category and date are required.'
+                'error': 'Amount, transaction type, category and date are required.'
             }, status=400)
 
         if transaction_type not in ['income', 'expense']:
@@ -128,10 +127,8 @@ def add_transaction(request):
                 'error': 'Transaction type must be income or expense.'
             }, status=400)
 
-        user = User.objects.get(id=user_id)
-
         transaction = Transaction.objects.create(
-            user=user,
+            user=request.user,
             amount=amount,
             transaction_type=transaction_type,
             category=category,
@@ -144,15 +141,11 @@ def add_transaction(request):
             'transaction_id': transaction.id
         }, status=201)
 
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
-
     except json.JSONDecodeError:
         return JsonResponse({
             'error': 'Invalid JSON.'
         }, status=400)
+    
 @csrf_exempt
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -271,38 +264,23 @@ def transaction_summary(request):
             'error': 'Only GET requests are allowed.'
         }, status=405)
 
-    user_id = request.GET.get('user_id')
+    total_income = Transaction.objects.filter(
+        user=request.user,
+        transaction_type='income'
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
-    if not user_id:
-        return JsonResponse({
-            'error': 'User ID is required.'
-        }, status=400)
+    total_expense = Transaction.objects.filter(
+        user=request.user,
+        transaction_type='expense'
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
-    try:
-        user = User.objects.get(id=user_id)
+    balance = total_income - total_expense
 
-        total_income = Transaction.objects.filter(
-            user=user,
-            transaction_type='income'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-
-        total_expense = Transaction.objects.filter(
-            user=user,
-            transaction_type='expense'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-
-        balance = total_income - total_expense
-
-        return JsonResponse({
-            'total_income': str(total_income),
-            'total_expense': str(total_expense),
-            'balance': str(balance)
-        }, status=200)
-
-    except User.DoesNotExist:
-        return JsonResponse({
-            'error': 'User not found.'
-        }, status=404)
+    return JsonResponse({
+        'total_income': str(total_income),
+        'total_expense': str(total_expense),
+        'balance': str(balance)
+    }, status=200)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
