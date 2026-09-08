@@ -157,6 +157,7 @@ export default function LandingPage() {
             Stop tracking yesterday's expenses.
             Start predicting tomorrow's wealth.
             FinTwin AI creates an intelligent Digital Twin of your finances to simulate decisions, forecast future wealth, optimize spending, and help you achieve financial freedom with confidence.
+          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
