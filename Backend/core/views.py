@@ -8,6 +8,7 @@ from django.db.models import Sum
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Transaction, Budget, SavingsGoal, Receipt, ReceiptItem, Notification, Insight, ChatMessage
 
@@ -70,7 +71,7 @@ def login(request):
     try:
         data = json.loads(request.body)
 
-        email = data.get('email', '').strip()
+        email = data.get('username', data.get('email', '')).strip()
         password = data.get('password', '')
 
         if not email or not password:
@@ -78,19 +79,24 @@ def login(request):
                 'error': 'Email and password are required.'
             }, status=400)
 
+        user_record = User.objects.filter(email__iexact=email).first()
         user = authenticate(
-            username=email,
+            username=user_record.username if user_record else email,
             password=password
         )
 
         if user is None:
             return JsonResponse({
-                'error': 'Invalid email or password.'
+                'detail': 'Invalid email or password.'
             }, status=401)
+
+        refresh = RefreshToken.for_user(user)
 
         return JsonResponse({
             'message': 'Login successful!',
-            'user_id': user.id
+            'user_id': user.id,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh)
         }, status=200)
 
     except json.JSONDecodeError:

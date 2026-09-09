@@ -10,7 +10,9 @@ export async function apiRequest(
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token
+        ? { Authorization: `Bearer ${token}` }
+        : {}),
       ...options.headers,
     },
   });
@@ -18,7 +20,9 @@ export async function apiRequest(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.detail || data.message || "API request failed");
+    throw new Error(
+      data.detail || data.message || "API request failed"
+    );
   }
 
   return data;

@@ -6,43 +6,41 @@ import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function SignIn() {
-  const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
+const navigate = useNavigate();
+const [showPassword, setShowPassword] = useState(false);
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const response = await fetch(
-      "http://127.0.0.1:8000/api/auth/login/",
-      {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          username: email,
           password,
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || data.message || "Login failed");
+        return;
       }
-    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      alert(data.detail || "Login failed");
-      return;
+      localStorage.setItem("access_token", data.access);
+      localStorage.setItem("refresh_token", data.refresh);
+      navigate("/onboarding");
+    } catch (error) {
+      console.error(error);
+      alert("Could not connect to the backend");
     }
-
-    localStorage.setItem("access_token", data.access);
-    localStorage.setItem("refresh_token", data.refresh);
-
-    navigate("/onboarding");
-  } catch (error) {
-    console.error(error);
-    alert("Could not connect to the backend");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -122,14 +120,14 @@ export default function SignIn() {
               <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Email</label>
               <div className="relative mt-1.5">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type="email" placeholder="you@example.com" required className="w-full glass rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+                <input type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full glass rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Password</label>
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" required className="w-full glass rounded-2xl pl-10 pr-10 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+                <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full glass rounded-2xl pl-10 pr-10 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
