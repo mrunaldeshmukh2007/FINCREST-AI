@@ -154,13 +154,9 @@ def add_transaction(request):
     
 @csrf_exempt
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_transactions(request):
 
-    transactions = Transaction.objects.filter(
-        user=request.user
-    ).order_by('-date')
-
+    transactions = Transaction.objects.all().order_by('-date')
    
     transaction_list = [] 
 

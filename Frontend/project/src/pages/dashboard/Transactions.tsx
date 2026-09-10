@@ -1,29 +1,97 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { apiRequest } from "../../lib/api";
 import {
   Search, Filter, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
   ArrowDownRight, Sparkles, ChevronLeft, ChevronRight, X, FileText,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/SectionHeading';
 import { Button } from '@/components/ui/Button';
-import { transactions as allTx, Transaction } from '@/lib/data';
+import { Transaction } from '@/lib/data';
 import { formatINR, formatDate } from '@/lib/utils';
 
+type ApiTransaction = {
+  id: number;
+  amount: string;
+  transaction_type: 'income' | 'expense';
+  category: string;
+  description: string;
+  date: string;
+};
+
+function toTransaction(transaction: ApiTransaction): Transaction {
+  return {
+    id: String(transaction.id),
+    merchant: transaction.description || transaction.category,
+    category: transaction.category,
+    amount: Number(transaction.amount),
+    type: transaction.transaction_type,
+    status: 'completed',
+    paymentMode: 'Cash',
+    date: transaction.date,
+  };
+}
+
 export default function Transactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Transaction | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [editing, setEditing] = useState<Transaction | null>(null);
+
   const perPage = 8;
 
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const data = await apiRequest('/api/transactions/');
+        const apiTransactions: ApiTransaction[] = data.transactions ?? data;
+        setTransactions(apiTransactions.map(toTransaction));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTransactions();
+  }, []);
+
+  const refreshTransactions = async () => {
+    const data = await apiRequest('/api/transactions/');
+    const apiTransactions: ApiTransaction[] = data.transactions ?? data;
+    setTransactions(apiTransactions.map(toTransaction));
+  };
+
+  const handleDelete = async (transaction: Transaction) => {
+    try {
+      setError('');
+      await apiRequest(`/api/transactions/${transaction.id}/delete/`, { method: 'DELETE' });
+      await refreshTransactions();
+      if (selected?.id === transaction.id) setSelected(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete transaction');
+    }
+  };
+
+  const openEdit = (transaction: Transaction) => {
+    setEditing(transaction);
+    setShowAdd(true);
+  };
   const filtered = useMemo(() => {
-    return allTx.filter((t) => {
+    return transactions.filter((t) => {
       const matchSearch = t.merchant.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase());
       const matchFilter = filter === 'all' || (filter === 'income' && t.type === 'income') || (filter === 'expense' && t.type === 'expense') || t.category === filter;
       return matchSearch && matchFilter;
     });
-  }, [search, filter]);
+  }, [transactions, search, filter]);
 
   const paged = filtered.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(filtered.length / perPage);
@@ -36,6 +104,7 @@ export default function Transactions() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Transactions</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Manage and analyze all your financial activity.</p>
+          {error && <p className="text-sm mt-2 text-red-400">{error}</p>}
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />}>Export CSV</Button>
@@ -74,7 +143,11 @@ export default function Transactions() {
               </tr>
             </thead>
             <tbody>
-              {paged.map((t, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Loading transactions...</td>
+                </tr>
+              ) : paged.map((t, i) => (
                 <motion.tr
                   key={t.id}
                   initial={{ opacity: 0 }}
@@ -106,8 +179,8 @@ export default function Transactions() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <button onClick={(e) => { e.stopPropagation(); setSelected(t); }} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Eye className="w-4 h-4" style={{ color: 'var(--text-muted)' }} /></button>
-                      <button onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Edit2 className="w-4 h-4" style={{ color: 'var(--text-muted)' }} /></button>
-                      <button onClick={(e) => e.stopPropagation()} className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center"><Trash2 className="w-4 h-4 text-red-400" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(t); }} className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center"><Edit2 className="w-4 h-4" style={{ color: 'var(--text-muted)' }} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); void handleDelete(t); }} className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center"><Trash2 className="w-4 h-4 text-red-400" /></button>
                     </div>
                   </td>
                 </motion.tr>
@@ -169,7 +242,12 @@ export default function Transactions() {
       {/* Add modal */}
       <AnimatePresence>
         {showAdd && (
-          <AddModal onClose={() => setShowAdd(false)} />
+          <AddModal
+            transaction={editing}
+            onClose={() => { setShowAdd(false); setEditing(null); }}
+            onSaved={async () => { await refreshTransactions(); setShowAdd(false); setEditing(null); }}
+            onError={(message) => setError(message)}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -185,7 +263,44 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function AddModal({ onClose }: { onClose: () => void }) {
+function AddModal({
+  transaction,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  transaction: Transaction | null;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [merchant, setMerchant] = useState(transaction?.merchant ?? '');
+  const [transactionType, setTransactionType] = useState<'expense' | 'income'>(transaction?.type ?? 'expense');
+  const [category, setCategory] = useState(transaction?.category ?? 'Food');
+  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '');
+  const [paymentMode, setPaymentMode] = useState<Transaction['paymentMode']>(transaction?.paymentMode ?? 'UPI');
+  const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10));
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      const payload = {
+        amount: Number(amount),
+        transaction_type: transactionType,
+        category,
+        description: merchant,
+        date,
+      };
+      const endpoint = transaction
+        ? `/api/transactions/${transaction.id}/update/`
+        : '/api/transactions/add/';
+      await apiRequest(endpoint, { method: transaction ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+      await onSaved();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to save transaction');
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -194,21 +309,22 @@ function AddModal({ onClose }: { onClose: () => void }) {
           <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Add Transaction</h3>
           <button onClick={onClose}><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onClose(); }} className="space-y-3">
-          <input placeholder="Merchant" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Merchant" required className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
           <div className="grid grid-cols-2 gap-3">
-            <select className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
+            <select value={transactionType} onChange={(e) => setTransactionType(e.target.value as 'expense' | 'income')} className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
               <option className="bg-slate-900">Expense</option>
               <option className="bg-slate-900">Income</option>
             </select>
-            <select className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
               {['Food', 'Shopping', 'Bills', 'Travel', 'Salary', 'Investments'].map(c => <option key={c} className="bg-slate-900">{c}</option>)}
             </select>
           </div>
-          <input type="number" placeholder="Amount (₹)" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
-          <select className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (₹)" required min="0.01" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+          <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as Transaction['paymentMode'])} className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
             {['UPI', 'Card', 'Bank Transfer', 'Cash', 'Wallet'].map(m => <option key={m} className="bg-slate-900">{m}</option>)}
           </select>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }} />
           <Button type="submit" className="w-full" icon={<Plus className="w-4 h-4" />}>Add Transaction</Button>
         </form>
       </motion.div>
