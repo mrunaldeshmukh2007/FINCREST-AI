@@ -1,13 +1,100 @@
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+
 import { Sparkles, TrendingUp, AlertTriangle } from 'lucide-react';
-import { budgets } from '@/lib/data';
+
+import { apiRequest } from '@/lib/api';
 import { formatINR } from '@/lib/utils';
 import { Badge } from '@/components/ui/SectionHeading';
 
+type ApiBudget = {
+  category: string;
+  amount_limit?: string | number;
+  spent?: string | number;
+  limit?: string | number;
+  color?: string;
+  icon?: string;
+  aiSuggestion?: string;
+};
+
+type Budget = {
+  category: string;
+  spent: number;
+  limit: number;
+  color: string;
+  icon: string;
+  aiSuggestion: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function toAmount(value: string | number | undefined): number {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function toApiBudget(value: unknown): ApiBudget | null {
+  if (!isRecord(value) || typeof value.category !== 'string') return null;
+
+  const amountLimit = value.amount_limit ?? value.limit;
+  if (typeof amountLimit !== 'string' && typeof amountLimit !== 'number') return null;
+
+  return {
+    category: value.category,
+    amount_limit: amountLimit,
+    spent: typeof value.spent === 'string' || typeof value.spent === 'number' ? value.spent : undefined,
+    limit: typeof value.limit === 'string' || typeof value.limit === 'number' ? value.limit : undefined,
+    color: typeof value.color === 'string' ? value.color : undefined,
+    icon: typeof value.icon === 'string' ? value.icon : undefined,
+    aiSuggestion: typeof value.aiSuggestion === 'string' ? value.aiSuggestion : undefined,
+  };
+}
+
+function toBudget(budget: ApiBudget): Budget {
+  return {
+    category: budget.category,
+    spent: toAmount(budget.spent),
+    limit: toAmount(budget.limit ?? budget.amount_limit),
+    color: budget.color ?? '#3B82F6',
+    icon: budget.icon ?? '•',
+    aiSuggestion: budget.aiSuggestion ?? 'Keep tracking your spending to stay on target.',
+  };
+}
+
 export default function Budgets() {
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const loadBudgets = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const data: unknown = await apiRequest('/api/budgets/');
+        const responseBudgets = isRecord(data) ? data.budgets : data;
+        const apiBudgets = Array.isArray(responseBudgets)
+          ? responseBudgets.map(toApiBudget).filter((budget): budget is ApiBudget => budget !== null)
+          : [];
+
+        setBudgets(apiBudgets.map(toBudget));
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to load budgets'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBudgets();
+  }, []);
+
   const totalSpent = budgets.reduce((s, b) => s + b.spent, 0);
   const totalLimit = budgets.reduce((s, b) => s + b.limit, 0);
-  const overallPct = Math.round((totalSpent / totalLimit) * 100);
+  const overallPct = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -15,6 +102,9 @@ export default function Budgets() {
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Budgets</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>AI-powered budget tracking across all your spending categories.</p>
       </div>
+
+      {loading && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading budgets...</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {/* Overall */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass gradient-border rounded-3xl p-6">
@@ -37,7 +127,7 @@ export default function Budgets() {
       {/* Budget cards */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {budgets.map((b, i) => {
-          const pct = Math.round((b.spent / b.limit) * 100);
+          const pct = b.limit > 0 ? Math.round((b.spent / b.limit) * 100) : 0;
           const remaining = b.limit - b.spent;
           const isOver = pct >= 90;
           const isWarning = pct >= 70 && pct < 90;
