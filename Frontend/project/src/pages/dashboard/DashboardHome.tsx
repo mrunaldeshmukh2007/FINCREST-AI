@@ -16,6 +16,11 @@ import { formatINR } from '@/lib/utils';
 
 export default function DashboardHome() {
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [summary, setSummary] = useState({
+  total_income: 0,
+  total_expense: 0,
+  balance: 0,
+});
 
 useEffect(() => {
   apiRequest('/api/transactions/')
@@ -29,6 +34,11 @@ useEffect(() => {
   apiRequest('/api/transactions/summary/')
     .then((data) => {
       console.log('Transaction summary:', data);
+      setSummary({
+        total_income: Number(data.total_income),
+        total_expense: Number(data.total_expense),
+        balance: Number(data.balance),
+      });
     })
     .catch((error) => {
       console.error('Failed to load transaction summary:', error);
@@ -53,9 +63,9 @@ return (
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard label="Current Balance" value={482350} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={{ value: 12, positive: true }} delay={0} />
-        <StatCard label="Monthly Income" value={230000} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={{ value: 8, positive: true }} delay={0.05} />
-        <StatCard label="Monthly Expense" value={142000} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={{ value: 5, positive: false }} delay={0.1} />
+        <StatCard label="Current Balance" value={summary.balance} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={{ value: 12, positive: true }} delay={0} />
+        <StatCard label="Monthly Income" value={summary.total_income} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={{ value: 8, positive: true }} delay={0.05} />
+        <StatCard label="Monthly Expense" value={summary.total_expense} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={{ value: 5, positive: false }} delay={0.1} />
         <StatCard label="Total Savings" value={388000} icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" trend={{ value: 15, positive: true }} delay={0.15} />
         <StatCard label="Investments" value={165000} icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" trend={{ value: 22, positive: true }} delay={0.2} />
         <StatCard label="AI Health Score" value={84} format="plain" icon={<Brain className="w-5 h-5" />} gradient="linear-gradient(135deg,#F59E0B,#EF4444)" delay={0.25} />
