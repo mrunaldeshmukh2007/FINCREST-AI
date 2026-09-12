@@ -1,5 +1,9 @@
 import json
+from pathlib import Path
 
+import joblib
+import pandas as pd
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -9,8 +13,17 @@ from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.response import Response
 
 from .models import Transaction, Budget, SavingsGoal, Receipt, ReceiptItem, Notification, Insight, ChatMessage
+
+
+SAVINGS_MODEL_PATH = (
+    Path(__file__).resolve().parents[2]
+    / 'ML_Models'
+    / 'models'
+    / 'simple_savings_model.joblib'
+)
 
 
 def test_api(request):
@@ -27,6 +40,8 @@ def signup(request):
         }, status=405)
 
     try:
+        print("DIGITAL TWIN USER:", request.user)
+        print("DIGITAL TWIN USER ID:", request.user.id)
         data = json.loads(request.body)
 
         full_name = data.get('full_name', '').strip()
@@ -284,6 +299,44 @@ def transaction_summary(request):
         'balance': str(balance)
     }, status=200)
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def predict_savings(request):
+    try:
+        bundle = joblib.load(SAVINGS_MODEL_PATH)
+        features = bundle['features']
+        data = request.data
+
+        missing_columns = sorted(set(features).difference(data.keys()))
+        if missing_columns:
+            return Response({
+                'error': 'Missing required features.',
+                'missing_features': missing_columns
+            }, status=400)
+
+        input_data = pd.DataFrame([
+            {feature: data[feature] for feature in features}
+        ])
+        input_data = input_data.apply(pd.to_numeric, errors='coerce')
+
+        if input_data.isna().any().any():
+            return Response({
+                'error': 'All feature values must be numeric.'
+            }, status=400)
+
+        input_data = input_data.fillna(pd.Series(bundle['medians']))
+        prediction = bundle['model'].predict(input_data)[0]
+
+        return Response({
+            'predicted_actual_savings': round(float(prediction), 2)
+        })
+
+    except Exception as error:
+        return Response({
+            'error': f'Unable to generate savings prediction: {error}'
+        }, status=500)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_budget(request):
@@ -302,15 +355,16 @@ def add_budget(request):
         }, status=201)
 
     except Exception as e:
-        return JsonResponse({
-            'error': str(e)
-        }, status=400)
+        print("DIGITAL TWIN ERROR:", e)
+        return Response(
+            {"error": str(e)},
+            status=400
+        )
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_budgets(request):
-
     budgets = Budget.objects.filter(
         user=request.user
     ).order_by('-created_at')
@@ -318,19 +372,30 @@ def get_budgets(request):
     budget_list = []
 
     for budget in budgets:
+        # Calculate spending for this user in this budget category
+        spent = Transaction.objects.filter(
+            user=request.user,
+            category=budget.category,
+            transaction_type='expense',
+            date__gte=budget.start_date,
+            date__lte=budget.end_date
+        ).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
         budget_list.append({
             'id': budget.id,
             'category': budget.category,
             'amount_limit': str(budget.amount_limit),
+            'spent': str(spent),
             'start_date': str(budget.start_date),
             'end_date': str(budget.end_date),
-            'created_at': str(budget.created_at)
+            'created_at': str(budget.created_at),
         })
 
     return JsonResponse({
         'budgets': budget_list
     }, status=200)
-
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -1012,3 +1077,61 @@ def delete_chat_message(request, chat_message_id):
         return JsonResponse({
             'error': 'Chat message not found.'
         }, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def digital_twin_simulate(request):
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+
+        user = request.user
+
+        # Get all transactions of the logged-in user
+        transactions = Transaction.objects.filter(user=user)
+
+        # Calculate actual income and expenses
+        monthly_income = sum(
+            float(t.amount)
+            for t in transactions
+            if t.transaction_type == 'income'
+        )
+
+        monthly_expense = sum(
+            float(t.amount)
+            for t in transactions
+            if t.transaction_type == 'expense'
+        )
+
+        # Scenario change sent by frontend
+        spending_change = float(
+            request.data.get('spending_change', 0)
+        )
+
+        # Current financial position
+        current_savings = monthly_income - monthly_expense
+
+        # Apply scenario
+        new_expense = monthly_expense + spending_change
+        new_savings = monthly_income - new_expense
+
+        savings_improvement = new_savings - current_savings
+
+        return Response({
+            "monthly_income": round(monthly_income, 2),
+            "monthly_expense_total": round(monthly_expense, 2),
+            "current_savings": round(current_savings, 2),
+            "new_savings": round(new_savings, 2),
+            "savings_improvement": round(savings_improvement, 2),
+            "yearly_improvement": round(
+                savings_improvement * 12, 2
+            )
+        })
+
+    except Exception as e:
+        print("DIGITAL TWIN ERROR:", e)
+
+        return Response(
+            {"error": str(e)},
+            status=400
+        )

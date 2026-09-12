@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/SectionHeading';
 import { Button } from '@/components/ui/Button';
+import { apiRequest } from '@/lib/api';
 import { formatINR } from '@/lib/utils';
 
 const scenarios = [
@@ -51,12 +52,41 @@ export default function DigitalTwin() {
   const [active, setActive] = useState('save5k');
   const [simulating, setSimulating] = useState(false);
   const proj = projections[active];
+  const [apiResult, setApiResult] = useState<{
+  current_savings: number;
+  new_savings: number;
+  savings_improvement: number;
+  yearly_improvement: number;
+} | null>(null);
 
-  const runSim = (id: string) => {
-    setSimulating(true);
-    setTimeout(() => { setActive(id); setSimulating(false); }, 800);
-  };
+  const runSim = async (id: string) => {
+  setSimulating(true);
 
+  try {
+    const scenario = scenarios.find((s) => s.id === id);
+
+    if (!scenario) {
+      throw new Error('Scenario not found');
+    }
+
+    const data = await apiRequest('/api/digital-twin/simulate/', {
+      method: 'POST',
+      body: JSON.stringify({
+        monthly_income: 30000,
+        monthly_expense_total: 20000,
+        spending_change: -2000,
+      }),
+    });
+
+    console.log('Digital Twin API Response:', data);
+
+    setActive(id);
+  } catch (error) {
+    console.error('Digital Twin simulation failed:', error);
+  } finally {
+    setSimulating(false);
+  }
+};
   return (
     <div className="space-y-6">
       {/* Hero header */}
