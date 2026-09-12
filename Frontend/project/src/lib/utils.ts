@@ -1,21 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export function useCountUp(end: number, duration = 1500, start = 0) {
   const [value, setValue] = useState(start);
-  const startedRef = useRef(false);
 
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
+    useEffect(() => {
     let raf: number;
     const startTime = performance.now();
+
     const animate = (now: number) => {
       const progress = Math.min((now - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
+
       setValue(start + (end - start) * eased);
-      if (progress < 1) raf = requestAnimationFrame(animate);
+
+      if (progress < 1) {
+        raf = requestAnimationFrame(animate);
+      }
     };
+
     raf = requestAnimationFrame(animate);
+
     return () => cancelAnimationFrame(raf);
   }, [end, duration, start]);
 

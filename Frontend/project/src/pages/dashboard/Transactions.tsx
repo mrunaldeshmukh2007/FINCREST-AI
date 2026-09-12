@@ -286,7 +286,7 @@ function AddModal({
     try {
       const payload = {
         amount: Number(amount),
-        transaction_type: transactionType,
+        transaction_type: transactionType.toLowerCase(),
         category,
         description: merchant,
         date,

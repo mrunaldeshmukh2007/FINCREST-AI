@@ -21,47 +21,34 @@ export async function apiRequest(
 
   let response = await makeRequest(token);
 
-  // If access token expired, try to refresh it
+  // If access token expired, refresh it and retry once
   if (response.status === 401) {
     const refreshToken = localStorage.getItem("refresh_token");
 
-    if (!refreshToken) {
-      throw new Error("Session expired. Please log in again.");
-    }
+    if (refreshToken) {
+      const refreshResponse = await fetch(
+        `${API_BASE_URL}/api/token/refresh/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            refresh: refreshToken,
+          }),
+        }
+      );
 
-    const refreshResponse = await fetch(
-      `${API_BASE_URL}/api/token/refresh/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          refresh: refreshToken,
-        }),
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+
+        localStorage.setItem("access_token", refreshData.access);
+        token = refreshData.access;
+
+        // Retry the original request with the new access token
+        response = await makeRequest(token);
       }
-    );
-
-    if (!refreshResponse.ok) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      throw new Error("Session expired. Please log in again.");
     }
-
-    const refreshData = await refreshResponse.json();
-
-    const newAccessToken = refreshData.access;
-
-    if (typeof newAccessToken !== "string") {
-      throw new Error("Session expired. Please log in again.");
-    }
-
-    token = newAccessToken;
-
-    localStorage.setItem("access_token", token);
-
-    // Retry original request with fresh token
-    response = await makeRequest(token);
   }
 
   const data = await response.json();

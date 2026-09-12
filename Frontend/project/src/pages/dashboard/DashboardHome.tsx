@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import {
   Wallet, TrendingUp, TrendingDown, PiggyBank, LineChart, Brain,
   ArrowUpRight, ArrowDownRight, Sparkles, Bot,
@@ -9,32 +10,62 @@ import {
 } from 'recharts';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/SectionHeading';
-import { monthlyIncome, cashFlow, categoryDistribution, healthTrend, transactions } from '@/lib/data';
+import { monthlyIncome, cashFlow, categoryDistribution, healthTrend } from '@/lib/data';
+import { apiRequest} from '@/lib/api';
 import { formatINR } from '@/lib/utils';
 
 export default function DashboardHome() {
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [summary, setSummary] = useState({
+  total_income: 0,
+  total_expense: 0,
+  balance: 0,
+});
+
+useEffect(() => {
+  apiRequest('/api/transactions/')
+    .then((data) => {
+      setTransactions(data.transactions);
+    })
+    .catch((error) => {
+      console.error('Failed to load transactions:', error);
+    });
+
+  apiRequest('/api/transactions/summary/')
+    .then((data) => {
+      console.log('Transaction summary:', data);
+      setSummary({
+        total_income: Number(data.total_income),
+        total_expense: Number(data.total_expense),
+        balance: Number(data.balance),
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to load transaction summary:', error);
+    });
+}, []);
+return (
+  <div className="space-y-6">
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Good morning, Arjun 👋</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Here's your financial snapshot for today.</p>
+      </div>
+      <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center"><Brain className="w-5 h-5 text-emerald-400" /></div>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Good morning, Arjun 👋</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Here's your financial snapshot for today.</p>
-        </div>
-        <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center"><Brain className="w-5 h-5 text-emerald-400" /></div>
-          <div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Health Score</p>
-            <p className="text-lg font-bold text-gradient-emerald">84<span className="text-sm" style={{ color: 'var(--text-muted)' }}>/100</span></p>
-          </div>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Health Score</p>
+          <p className="text-lg font-bold text-gradient-emerald">84<span className="text-sm" style={{ color: 'var(--text-muted)' }}>/100</span></p>
         </div>
       </div>
+    </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard label="Current Balance" value={482350} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={{ value: 12, positive: true }} delay={0} />
-        <StatCard label="Monthly Income" value={230000} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={{ value: 8, positive: true }} delay={0.05} />
-        <StatCard label="Monthly Expense" value={142000} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={{ value: 5, positive: false }} delay={0.1} />
+        <StatCard label="Current Balance" value={summary.balance} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" trend={{ value: 12, positive: true }} delay={0} />
+        <StatCard label="Monthly Income" value={summary.total_income} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" trend={{ value: 8, positive: true }} delay={0.05} />
+        <StatCard label="Monthly Expense" value={summary.total_expense} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" trend={{ value: 5, positive: false }} delay={0.1} />
         <StatCard label="Total Savings" value={388000} icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" trend={{ value: 15, positive: true }} delay={0.15} />
         <StatCard label="Investments" value={165000} icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" trend={{ value: 22, positive: true }} delay={0.2} />
         <StatCard label="AI Health Score" value={84} format="plain" icon={<Brain className="w-5 h-5" />} gradient="linear-gradient(135deg,#F59E0B,#EF4444)" delay={0.25} />
@@ -154,16 +185,16 @@ export default function DashboardHome() {
         <div className="space-y-2">
           {transactions.slice(0, 6).map((t, i) => (
             <motion.div key={t.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 + i * 0.05 }} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-500/15' : 'bg-red-500/10'}`}>
-                {t.type === 'income' ? <ArrowUpRight className="w-5 h-5 text-emerald-400" /> : <ArrowDownRight className="w-5 h-5 text-red-400" />}
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.transaction_type === 'income' ? 'bg-emerald-500/15' : 'bg-red-500/10'}`}>
+                {t.transaction_type === 'income' ? <ArrowUpRight className="w-5 h-5 text-emerald-400" /> : <ArrowDownRight className="w-5 h-5 text-red-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.merchant}</p>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.category} · {t.paymentMode}</p>
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{t.description}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.category} · -</p>
               </div>
               <div className="text-right">
-                <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-400' : ''}`} style={{ color: t.type === 'income' ? undefined : 'var(--text-primary)' }}>
-                  {t.type === 'income' ? '+' : '-'}{formatINR(t.amount)}
+                <p className={`text-sm font-semibold ${t.transaction_type === 'income' ? 'text-emerald-400' : ''}`} style={{ color: t.transaction_type === 'income' ? undefined : 'var(--text-primary)' }}>
+                  {t.transaction_type === 'income' ? '+' : '-'}{formatINR(t.amount)}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
               </div>
