@@ -25,6 +25,14 @@ useEffect(() => {
     .catch((error) => {
       console.error('Failed to load transactions:', error);
     });
+
+  apiRequest('/api/transactions/summary/')
+    .then((data) => {
+      console.log('Transaction summary:', data);
+    })
+    .catch((error) => {
+      console.error('Failed to load transaction summary:', error);
+    });
 }, []);
 return (
   <div className="space-y-6">

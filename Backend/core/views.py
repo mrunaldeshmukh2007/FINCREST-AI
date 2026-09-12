@@ -116,7 +116,7 @@ def add_transaction(request):
 
     try:
         data = json.loads(request.body)
-
+        
         amount = data.get('amount')
         transaction_type = data.get('transaction_type', '').strip()
         category = data.get('category', '').strip()
