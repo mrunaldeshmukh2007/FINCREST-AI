@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Brain, Sparkles, TrendingUp, Shield, Wallet, Target, Zap,
-  Play, RotateCcw, Bot, ArrowRight,
+  Play, RotateCcw, Bot,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -12,6 +12,33 @@ import { Button } from '@/components/ui/Button';
 import { apiRequest } from '@/lib/api';
 import { formatINR } from '@/lib/utils';
 
+interface TimelinePoint {
+  month: string;
+  projectedSavings: number;
+  projectedNetWorth: number;
+  projectedInvestmentValue: number;
+}
+
+interface DigitalTwinData {
+  monthlyIncome: number;
+  monthlyExpense: number;
+  monthlySavings: number;
+  currentSavings: number;
+  currentNetWorth: number;
+  projectedSavings: number;
+  futureNetWorth: number;
+  riskScore: number;
+  riskLevel: string;
+  currentInvestment: number;
+  investmentGrowth: number;
+  futureInvestmentValue: number;
+  currentEmergencyFund: number;
+  recommendedEmergencyFund: number;
+  emergencyFundCoverage: number;
+  hasFinancialData: boolean;
+  timeline: TimelinePoint[];
+}
+
 const scenarios = [
   { id: 'save5k', label: 'Save ₹5,000 more/mo', icon: Target },
   { id: 'iphone', label: 'Can I afford an iPhone?', icon: Wallet },
@@ -20,73 +47,44 @@ const scenarios = [
   { id: 'year', label: 'Savings after 1 year?', icon: TrendingUp },
 ];
 
-const projections: Record<string, { savings: number; netWorth: number; risk: number; growth: number; emergency: number; data: any[]; explanation: string }> = {
-  save5k: {
-    savings: 60000, netWorth: 1048000, risk: 22, growth: 180000, emergency: 300000,
-    data: [{ month: 'Now', value: 388000 }, { month: 'M2', value: 398000 }, { month: 'M4', value: 408000 }, { month: 'M6', value: 418000 }, { month: 'M8', value: 428000 }, { month: 'M10', value: 438000 }, { month: 'M12', value: 448000 }],
-    explanation: 'Saving an extra ₹5,000/month adds ₹60,000 to your annual savings. Compounded in index funds at 12%, this becomes ₹1.04L over 10 years. Your emergency fund hits target 4 months earlier.',
-  },
-  iphone: {
-    savings: -79900, netWorth: 828000, risk: 45, growth: 120000, emergency: 240000,
-    data: [{ month: 'Now', value: 388000 }, { month: 'M2', value: 370000 }, { month: 'M4', value: 365000 }, { month: 'M6', value: 360000 }, { month: 'M8', value: 355000 }, { month: 'M10', value: 350000 }, { month: 'M12', value: 345000 }],
-    explanation: 'An iPhone (₹79,900) would reduce your savings by 20% and delay your emergency fund by 3 months. Risk score rises to 45. Consider EMI at ₹6,658/mo for 12 months to spread impact, or wait for Big Billion Days (avg 15% off).',
-  },
-  bike: {
-    savings: -25000, netWorth: 920000, risk: 38, growth: 140000, emergency: 260000,
-    data: [{ month: 'Now', value: 388000 }, { month: 'M2', value: 378000 }, { month: 'M4', value: 380000 }, { month: 'M6', value: 382000 }, { month: 'M8', value: 384000 }, { month: 'M10', value: 386000 }, { month: 'M12', value: 388000 }],
-    explanation: 'A bike at ₹1.2L with ₹25K down payment is affordable. Monthly EMI ₹2,800 fits your budget. However, fuel + maintenance adds ₹3,500/mo. Net impact: neutral after 8 months. Consider an EV for 40% lower running costs.',
-  },
-  travel: {
-    savings: -15000, netWorth: 950000, risk: 30, growth: 155000, emergency: 270000,
-    data: [{ month: 'Now', value: 388000 }, { month: 'M2', value: 380000 }, { month: 'M4', value: 385000 }, { month: 'M6', value: 390000 }, { month: 'M8', value: 395000 }, { month: 'M10', value: 400000 }, { month: 'M12', value: 405000 }],
-    explanation: 'A ₹15,000 trip is well within budget. Your savings rate (38%) is healthy. Book flights 45 days early for 22% savings. Travel won\'t impact your emergency fund timeline. Go for it!',
-  },
-  year: {
-    savings: 88000, netWorth: 1056000, risk: 18, growth: 195000, emergency: 300000,
-    data: [{ month: 'Now', value: 388000 }, { month: 'M2', value: 402000 }, { month: 'M4', value: 416000 }, { month: 'M6', value: 430000 }, { month: 'M8', value: 444000 }, { month: 'M10', value: 458000 }, { month: 'M12', value: 476000 }],
-    explanation: 'At your current savings rate (₹88K/yr) plus investment growth (12%), your net worth reaches ₹10.56L in 12 months. Emergency fund completes in 5 months. Excellent trajectory!',
-  },
-};
-
 export default function DigitalTwin() {
   const [active, setActive] = useState('save5k');
+  const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
-  const proj = projections[active];
-  const [apiResult, setApiResult] = useState<{
-  current_savings: number;
-  new_savings: number;
-  savings_improvement: number;
-  yearly_improvement: number;
-} | null>(null);
+  const [data, setData] = useState<DigitalTwinData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const snapshot = await apiRequest('/api/digital-twin/');
+        setData(snapshot as DigitalTwinData);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load Digital Twin data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const runSim = async (id: string) => {
-  setSimulating(true);
+    setSimulating(true);
+    setError(null);
 
-  try {
-    const scenario = scenarios.find((s) => s.id === id);
-
-    if (!scenario) {
-      throw new Error('Scenario not found');
+    try {
+      const snapshot = await apiRequest('/api/digital-twin/');
+      setData(snapshot as DigitalTwinData);
+      setActive(id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh Digital Twin data');
+    } finally {
+      setSimulating(false);
     }
+  };
 
-    const data = await apiRequest('/api/digital-twin/simulate/', {
-      method: 'POST',
-      body: JSON.stringify({
-        monthly_income: 30000,
-        monthly_expense_total: 20000,
-        spending_change: -2000,
-      }),
-    });
-
-    console.log('Digital Twin API Response:', data);
-
-    setActive(id);
-  } catch (error) {
-    console.error('Digital Twin simulation failed:', error);
-  } finally {
-    setSimulating(false);
-  }
-};
   return (
     <div className="space-y-6">
       {/* Hero header */}
@@ -134,20 +132,26 @@ export default function DigitalTwin() {
 
       {/* Results */}
       <AnimatePresence mode="wait">
-        {simulating ? (
+        {loading || simulating ? (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="glass rounded-3xl p-12 flex flex-col items-center justify-center">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-12 h-12 rounded-full border-4 border-blue-500/20 border-t-blue-500" />
             <p className="mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>Simulating future scenarios...</p>
           </motion.div>
         ) : (
           <motion.div key={active} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+            {error && (
+              <div className="glass rounded-3xl p-4" style={{ border: '1px solid rgba(239,68,68,0.3)' }}>
+                <p className="text-sm font-medium" style={{ color: '#EF4444' }}>Digital Twin data could not be loaded: {error}</p>
+              </div>
+            )}
+
             {/* Metric cards */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard label="Projected Savings" value={proj.savings} icon={<Target className="w-5 h-5" />} color="#10B981" format="inr" />
-              <MetricCard label="Future Net Worth" value={proj.netWorth} icon={<Wallet className="w-5 h-5" />} color="#2563EB" format="inr" />
-              <MetricCard label="Risk Score" value={proj.risk} icon={<Shield className="w-5 h-5" />} color="#F59E0B" format="plain" suffix="/100" />
-              <MetricCard label="Investment Growth" value={proj.growth} icon={<TrendingUp className="w-5 h-5" />} color="#7C3AED" format="inr" />
-              <MetricCard label="Emergency Fund" value={proj.emergency} icon={<Shield className="w-5 h-5" />} color="#38BDF8" format="inr" />
+              <MetricCard label="Projected Savings" value={data?.projectedSavings ?? 0} icon={<Target className="w-5 h-5" />} color="#10B981" format="inr" />
+              <MetricCard label="Future Net Worth" value={data?.futureNetWorth ?? 0} icon={<Wallet className="w-5 h-5" />} color="#2563EB" format="inr" />
+              <MetricCard label="Risk Score" value={data?.riskScore ?? 0} secondary={data?.riskLevel} icon={<Shield className="w-5 h-5" />} color="#F59E0B" format="plain" suffix="/100" />
+              <MetricCard label="Investment Growth" value={data?.investmentGrowth ?? 0} icon={<TrendingUp className="w-5 h-5" />} color="#7C3AED" format="inr" />
+              <MetricCard label="Emergency Fund" value={data?.currentEmergencyFund ?? 0} secondary={`${formatINR(data?.recommendedEmergencyFund ?? 0, true)} recommended · ${(data?.emergencyFundCoverage ?? 0).toFixed(0)}% covered`} icon={<Shield className="w-5 h-5" />} color="#38BDF8" format="inr" />
             </div>
 
             {/* Future graph */}
@@ -157,26 +161,30 @@ export default function DigitalTwin() {
                   <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Projected Wealth Timeline</h3>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>12-month forecast based on this scenario</p>
                 </div>
-                <Badge variant={proj.risk < 30 ? 'success' : proj.risk < 50 ? 'warning' : 'danger'}>
-                  {proj.risk < 30 ? 'Low Risk' : proj.risk < 50 ? 'Moderate Risk' : 'High Risk'}
-                </Badge>
+                <Badge variant="info">{data?.riskLevel ?? 'Calculating'}</Badge>
               </div>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={proj.data}>
-                  <defs>
-                    <linearGradient id="twinGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-                  <XAxis dataKey="month" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
-                  <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} />
-                  <ReferenceLine y={388000} stroke="#10B981" strokeDasharray="4 4" label={{ value: 'Current', fill: '#10B981', fontSize: 10, position: 'insideTopLeft' }} />
-                  <Area type="monotone" dataKey="value" stroke="#7C3AED" strokeWidth={3} fill="url(#twinGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {data?.timeline?.length ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={data.timeline}>
+                    <defs>
+                      <linearGradient id="twinGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                    <XAxis dataKey="month" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
+                    <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: unknown) => formatINR(Number(v))} />
+                    <ReferenceLine y={data.currentNetWorth} stroke="#10B981" strokeDasharray="4 4" label={{ value: 'Current', fill: '#10B981', fontSize: 10, position: 'insideTopLeft' }} />
+                    <Area type="monotone" dataKey="projectedNetWorth" stroke="#7C3AED" strokeWidth={3} fill="url(#twinGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Projection timeline unavailable.</p>
+                </div>
+              )}
             </div>
 
             {/* AI explanation */}
@@ -189,7 +197,15 @@ export default function DigitalTwin() {
                   <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>AI Twin Explanation</span>
                   <Badge variant="info"><Sparkles className="w-3 h-3" /> Analysis</Badge>
                 </div>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{proj.explanation}</p>
+                {data ? (
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {data?.hasFinancialData
+                      ? `Based on your real financial data, average monthly income is ${formatINR(data.monthlyIncome)} and average monthly expenses are ${formatINR(data.monthlyExpense)}. Your projected savings after 12 months is ${formatINR(data.projectedSavings)}.`
+                      : 'No transactions are recorded yet. Add income and expense transactions to create a personalized projection.'}
+                  </p>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No Digital Twin data is available yet.</p>
+                )}
                 <div className="mt-4 flex gap-2">
                   <Button size="sm" icon={<Play className="w-4 h-4" />}>Apply Scenario</Button>
                   <Button size="sm" variant="secondary" icon={<RotateCcw className="w-4 h-4" />} onClick={() => runSim(active)}>Re-run</Button>
@@ -203,7 +219,7 @@ export default function DigitalTwin() {
   );
 }
 
-function MetricCard({ label, value, icon, color, format, suffix }: { label: string; value: number; icon: React.ReactNode; color: string; format: 'inr' | 'plain'; suffix?: string }) {
+function MetricCard({ label, value, secondary, icon, color, format, suffix }: { label: string; value: number; secondary?: string; icon: React.ReactNode; color: string; format: 'inr' | 'plain'; suffix?: string }) {
   const display = format === 'inr' ? formatINR(value, true) : `${value}${suffix || ''}`;
   const isNegative = value < 0;
   return (
@@ -211,7 +227,8 @@ function MetricCard({ label, value, icon, color, format, suffix }: { label: stri
       <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-10 blur-xl" style={{ background: color }} />
       <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ background: `${color}20`, color }}>{icon}</div>
       <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      <p className={`text-lg font-bold mt-0.5 ${isNegative ? 'text-red-400' : ''}`} style={{ color: isNegative ? undefined : 'var(--text-primary)' }}>{isNegative && format === 'inr' ? '' : ''}{display}</p>
+      <p className={`text-lg font-bold mt-0.5 ${isNegative ? 'text-red-400' : ''}`} style={{ color: isNegative ? undefined : 'var(--text-primary)' }}>{display}</p>
+      {secondary && <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>{secondary}</p>}
     </motion.div>
   );
 }

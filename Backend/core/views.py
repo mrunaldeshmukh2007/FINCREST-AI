@@ -17,6 +17,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 
 from .models import Transaction, Budget, SavingsGoal, Receipt, ReceiptItem, Notification, Insight, ChatMessage
+from .services.ai_service import AIServiceError, generate_financial_response
+from .services.digital_twin_service import build_digital_twin_data
 
 
 SAVINGS_MODEL_PATH = (
@@ -1005,19 +1007,60 @@ def delete_insight(request, insight_id):
 @permission_classes([IsAuthenticated])
 def add_chat_message(request):
     try:
+        if request.data.get('role') != 'user':
+            return Response({
+                'error': 'Only user messages can be submitted to the AI coach.'
+            }, status=400)
+
+        text = str(request.data.get('text', '')).strip()
+        if not text:
+            return Response({
+                'error': 'Message text is required.'
+            }, status=400)
+
         chat_message = ChatMessage.objects.create(
             user=request.user,
-            role=request.data.get('role'),
-            text=request.data.get('text')
+            role='user',
+            text=text
         )
 
-        return JsonResponse({
+        transactions = Transaction.objects.filter(
+            user=request.user
+        ).order_by('-date', '-created_at')
+
+        try:
+            ai_text = generate_financial_response(text, transactions)
+        except AIServiceError as error:
+            return Response({
+                'error': str(error),
+                'user_message_id': chat_message.id,
+            }, status=503)
+
+        ai_message = ChatMessage.objects.create(
+            user=request.user,
+            role='ai',
+            text=ai_text
+        )
+
+        return Response({
             'message': 'Chat message added successfully!',
-            'chat_message_id': chat_message.id
+            'chat_message_id': chat_message.id,
+            'user_message': {
+                'id': chat_message.id,
+                'role': chat_message.role,
+                'text': chat_message.text,
+                'created_at': str(chat_message.created_at),
+            },
+            'ai_message': {
+                'id': ai_message.id,
+                'role': ai_message.role,
+                'text': ai_message.text,
+                'created_at': str(ai_message.created_at),
+            },
         }, status=201)
 
     except Exception as e:
-        return JsonResponse({
+        return Response({
             'error': str(e)
         }, status=400)
 
@@ -1148,3 +1191,9 @@ def digital_twin_simulate(request):
             {"error": str(e)},
             status=400
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def digital_twin_data(request):
+    return Response(build_digital_twin_data(request.user), status=200)
