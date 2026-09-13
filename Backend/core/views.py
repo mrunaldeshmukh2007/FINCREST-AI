@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from decimal import Decimal, InvalidOperation
 
 import joblib
 import pandas as pd
@@ -133,6 +134,15 @@ def add_transaction(request):
         data = json.loads(request.body)
         
         amount = data.get('amount')
+
+        try:
+            amount = Decimal(str(amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return JsonResponse({
+                'error': 'Amount must be a valid number.'
+            }, status=400)
+
+
         transaction_type = data.get('transaction_type', '').strip()
         category = data.get('category', '').strip()
         description = data.get('description', '').strip()
@@ -169,9 +179,12 @@ def add_transaction(request):
     
 @csrf_exempt
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_transactions(request):
 
-    transactions = Transaction.objects.all().order_by('-date')
+    transactions = Transaction.objects.filter(
+        user=request.user
+    ).order_by('-date')
    
     transaction_list = [] 
 
