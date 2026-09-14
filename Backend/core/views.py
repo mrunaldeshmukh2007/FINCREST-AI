@@ -113,10 +113,11 @@ def login(request):
         return JsonResponse({
             'message': 'Login successful!',
             'user_id': user.id,
+            'name': user.first_name,
+            'email': user.email,
             'access': str(refresh.access_token),
             'refresh': str(refresh)
         }, status=200)
-
     except json.JSONDecodeError:
         return JsonResponse({
             'error': 'Invalid JSON.'

@@ -18,7 +18,7 @@ export default function DashboardHome() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Good morning, Arjun 👋</h1>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Good morning, {localStorage.getItem('user_name') || 'User'} 👋</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Here's your financial snapshot for today.</p>
         </div>
         <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-3">

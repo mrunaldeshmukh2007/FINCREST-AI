@@ -26,7 +26,7 @@ export default function SignIn() {
 
     try {
       const response = await fetch(
-        'http://127.0.0.1:8000/api/token/',
+        'http://127.0.0.1:8000/api/login/',
         {
           method: 'POST',
           headers: {
@@ -58,6 +58,10 @@ export default function SignIn() {
 
       if (data.refresh) {
         localStorage.setItem('refresh_token', data.refresh);
+      }
+
+      if (data.name) {
+        localStorage.setItem('user_name', data.name);
       }
 
       // Go to onboarding after successful login
