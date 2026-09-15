@@ -80,7 +80,7 @@ def build_digital_twin_data(user):
         'investmentGrowth': round(investment_growth, 2),
         'futureInvestmentValue': round(future_investment_value, 2),
         'currentEmergencyFund': round(current_emergency_fund, 2),
-        'recommendedEmergewncyFund': round(recommended_emergency_fund, 2),
+        'recommendedEmergencyFund': round(recommended_emergency_fund, 2),
         'emergencyFundCoverage': round(emergency_fund_coverage, 2),
         'hasFinancialData': bool(transactions),
         'timeline': timeline,
