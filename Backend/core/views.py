@@ -315,37 +315,152 @@ def transaction_summary(request):
         'balance': str(balance)
     }, status=200)
 
+def build_savings_prediction_features(user, bundle):
+    transactions = Transaction.objects.filter(
+        user=user
+    )
+
+    budgets = Budget.objects.filter(
+        user=user
+    )
+
+    savings_goals = SavingsGoal.objects.filter(
+        user=user
+    )
+
+    income_transactions = transactions.filter(
+        transaction_type='income'
+    )
+
+    expense_transactions = transactions.filter(
+        transaction_type='expense'
+    )
+
+    total_income = sum(
+        float(transaction.amount)
+        for transaction in income_transactions
+    )
+
+    total_expense = sum(
+        float(transaction.amount)
+        for transaction in expense_transactions
+    )
+
+    transaction_count = transactions.count()
+
+    if total_income > 0:
+        savings_rate = (
+            (total_income - total_expense) / total_income
+        )
+    else:
+        savings_rate = 0.0
+
+    budget_goal = sum(
+        float(budget.amount_limit)
+        for budget in budgets
+    )
+
+    discretionary_categories = {
+        'Dining Out',
+        'Entertainment',
+    }
+
+    essential_categories = {
+        'Groceries',
+        'Healthcare',
+        'Insurance',
+        'Rent',
+        'Transportation',
+        'Utilities',
+        'Education',
+    }
+
+    discretionary_spending = sum(
+        float(transaction.amount)
+        for transaction in expense_transactions
+        if transaction.category in discretionary_categories
+    )
+
+    essential_spending = sum(
+        float(transaction.amount)
+        for transaction in expense_transactions
+        if transaction.category in essential_categories
+    )
+
+    rent_or_mortgage = sum(
+        float(transaction.amount)
+        for transaction in expense_transactions
+        if transaction.category == 'Rent'
+    )
+
+    investment_amount = sum(
+        float(transaction.amount)
+        for transaction in expense_transactions
+        if transaction.category == 'Investments'
+    )
+
+    savings_goal_met = 0
+
+    if savings_goals.exists():
+        savings_goal_met = int(
+            any(
+                float(goal.saved_amount) >= float(goal.target_amount)
+                for goal in savings_goals
+            )
+        )
+
+    features = {}
+
+    for feature in bundle['features']:
+        features[feature] = bundle['medians'][feature]
+
+    features.update({
+        'monthly_income': total_income,
+        'monthly_expense_total': total_expense,
+        'savings_rate': savings_rate,
+        'budget_goal': budget_goal,
+        'transaction_count': transaction_count,
+        'discretionary_spending': discretionary_spending,
+        'essential_spending': essential_spending,
+        'rent_or_mortgage': rent_or_mortgage,
+        'investment_amount': investment_amount,
+        'savings_goal_met': savings_goal_met,
+    })
+
+    return features
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_savings(request):
     try:
         bundle = joblib.load(SAVINGS_MODEL_PATH)
-        features = bundle['features']
-        data = request.data
 
-        missing_columns = sorted(set(features).difference(data.keys()))
-        if missing_columns:
-            return Response({
-                'error': 'Missing required features.',
-                'missing_features': missing_columns
-            }, status=400)
+        features = build_savings_prediction_features(
+            request.user,
+            bundle
+        )
 
         input_data = pd.DataFrame([
-            {feature: data[feature] for feature in features}
-        ])
-        input_data = input_data.apply(pd.to_numeric, errors='coerce')
+            features
+        ])[bundle['features']]
+
+        input_data = input_data.apply(
+            pd.to_numeric,
+            errors='coerce'
+        )
 
         if input_data.isna().any().any():
             return Response({
-                'error': 'All feature values must be numeric.'
+                'error': 'Unable to prepare numeric prediction features.'
             }, status=400)
 
-        input_data = input_data.fillna(pd.Series(bundle['medians']))
         prediction = bundle['model'].predict(input_data)[0]
 
         return Response({
-            'predicted_actual_savings': round(float(prediction), 2)
+            'predicted_actual_savings': round(
+                float(prediction),
+                2
+            )
         })
 
     except Exception as error:

@@ -57,6 +57,7 @@ export default function DashboardHome() {
   });
 
   const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [predictedSavings, setPredictedSavings] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,11 +67,15 @@ export default function DashboardHome() {
         setLoading(true);
         setError('');
 
-        const [transactionData, summaryData, digitalTwinData] = await Promise.all([
-          apiRequest('/api/transactions/'),
-          apiRequest('/api/transactions/summary/'),
-          apiRequest('/api/digital-twin/'),
-        ]);
+       const [transactionData, summaryData, digitalTwinData, predictionData] = await Promise.all([
+        apiRequest('/api/transactions/'),
+        apiRequest('/api/transactions/summary/'),
+        apiRequest('/api/digital-twin/'),
+        apiRequest('/api/ml/predict-savings/', {
+          method: 'POST',
+          body: JSON.stringify({}),
+        }),
+      ]);
 
         if (cancelled) return;
 
@@ -86,6 +91,7 @@ export default function DashboardHome() {
         });
 
         setHealthScore(Number(digitalTwinData.healthScore));
+        setPredictedSavings(Number(predictionData.predicted_actual_savings));
 
       } catch (requestError) {
         if (!cancelled) {
@@ -158,7 +164,22 @@ export default function DashboardHome() {
         {loading ? <MetricPlaceholder /> : <StatCard label="Current Balance" value={summary.balance} icon={<Wallet className="w-5 h-5" />} gradient="linear-gradient(135deg,#2563EB,#7C3AED)" delay={0} />}
         {loading ? <MetricPlaceholder /> : <StatCard label="Total Income" value={summary.total_income} icon={<TrendingUp className="w-5 h-5" />} gradient="linear-gradient(135deg,#10B981,#38BDF8)" delay={0.05} />}
         {loading ? <MetricPlaceholder /> : <StatCard label="Total Expense" value={summary.total_expense} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" delay={0.1} />}
-        <UnavailableStatCard label="Total Savings" icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" />
+        {loading || predictedSavings === null ? (
+          <UnavailableStatCard
+            label="Predicted Savings"
+            icon={<PiggyBank className="w-5 h-5" />}
+            gradient="linear-gradient(135deg,#7C3AED,#38BDF8)"
+           />
+        ) : (
+          <StatCard
+            label="Predicted Savings"
+            value={predictedSavings}
+            icon={<PiggyBank className="w-5 h-5" />}
+            gradient="linear-gradient(135deg,#7C3AED,#38BDF8)"
+            delay={0.15}
+          />
+        )}
+        
         <UnavailableStatCard label="Investments" icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" />
         {loading || healthScore === null ? (
           <UnavailableStatCard
