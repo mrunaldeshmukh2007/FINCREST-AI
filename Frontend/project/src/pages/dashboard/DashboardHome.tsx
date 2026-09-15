@@ -56,6 +56,8 @@ export default function DashboardHome() {
     balance: 0,
   });
 
+  const [healthScore, setHealthScore] = useState<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -64,9 +66,10 @@ export default function DashboardHome() {
         setLoading(true);
         setError('');
 
-        const [transactionData, summaryData] = await Promise.all([
+        const [transactionData, summaryData, digitalTwinData] = await Promise.all([
           apiRequest('/api/transactions/'),
           apiRequest('/api/transactions/summary/'),
+          apiRequest('/api/digital-twin/'),
         ]);
 
         if (cancelled) return;
@@ -81,6 +84,9 @@ export default function DashboardHome() {
           total_expense: Number(summaryData.total_expense),
           balance: Number(summaryData.balance),
         });
+
+        setHealthScore(Number(digitalTwinData.healthScore));
+
       } catch (requestError) {
         if (!cancelled) {
           setError(requestError instanceof Error ? requestError.message : 'Failed to load dashboard data');
@@ -139,7 +145,9 @@ export default function DashboardHome() {
         <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center"><Brain className="w-5 h-5 text-emerald-400" /></div>
         <div>
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Health Score</p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-muted)' }}>Unavailable</p>
+          <p className="text-lg font-bold text-emerald-400">
+            {healthScore === null ? 'Unavailable' : `${healthScore}/100`}
+          </p>
         </div>
       </div>
     </div>
@@ -152,7 +160,22 @@ export default function DashboardHome() {
         {loading ? <MetricPlaceholder /> : <StatCard label="Total Expense" value={summary.total_expense} icon={<TrendingDown className="w-5 h-5" />} gradient="linear-gradient(135deg,#EF4444,#F59E0B)" delay={0.1} />}
         <UnavailableStatCard label="Total Savings" icon={<PiggyBank className="w-5 h-5" />} gradient="linear-gradient(135deg,#7C3AED,#38BDF8)" />
         <UnavailableStatCard label="Investments" icon={<LineChart className="w-5 h-5" />} gradient="linear-gradient(135deg,#22C55E,#10B981)" />
-        <UnavailableStatCard label="AI Health Score" icon={<Brain className="w-5 h-5" />} gradient="linear-gradient(135deg,#F59E0B,#EF4444)" />
+        {loading || healthScore === null ? (
+          <UnavailableStatCard
+            label="AI Health Score"
+            icon={<Brain className="w-5 h-5" />}
+            gradient="linear-gradient(135deg,#F59E0B,#EF4444)"
+          />
+        ) : (
+          <StatCard
+            label="AI Health Score"
+            value={healthScore}
+            format="plain"
+            icon={<Brain className="w-5 h-5" />}
+            gradient="linear-gradient(135deg,#F59E0B,#EF4444)"
+            delay={0.2}
+          />
+        )}
       </div>
 
       {/* Charts row */}
@@ -227,7 +250,16 @@ export default function DashboardHome() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="glass rounded-3xl p-6">
           <h3 className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Financial Health</h3>
           <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>6-month trend</p>
-          <EmptyChart message="Financial health scoring is not available yet." />
+          {healthScore === null ? (
+            <EmptyChart message="Financial health score is not available yet." />
+          ) : (
+            <div className="h-[200px] flex flex-col items-center justify-center">
+              <p className="text-5xl font-bold text-emerald-400">{healthScore}</p>
+              <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+                AI Financial Health Score
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
 
