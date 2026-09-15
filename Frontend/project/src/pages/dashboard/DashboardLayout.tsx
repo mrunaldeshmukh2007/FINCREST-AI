@@ -125,7 +125,12 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
             <Plus className="w-4 h-4" /> <span className="hidden md:inline">Quick Add</span>
           </button>
           <button onClick={() => navigate('/app/profile')} className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-            AS
+            {(localStorage.getItem('user_name') || 'User')
+              .split(' ')
+              .map((name) => name[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase()}
           </button>
         </div>
       </div>

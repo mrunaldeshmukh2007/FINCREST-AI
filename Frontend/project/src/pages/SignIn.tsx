@@ -64,6 +64,14 @@ export default function SignIn() {
         localStorage.setItem('user_name', data.name);
       }
 
+      if (data.email) {
+        localStorage.setItem('user_email', data.email);
+      }
+
+      if (data.user_id) {
+        localStorage.setItem('user_id', String(data.user_id));
+      }
+      
       // Go to onboarding after successful login
       navigate('/onboarding');
     } catch (error) {

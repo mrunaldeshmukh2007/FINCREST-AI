@@ -23,6 +23,9 @@ export default function Profile() {
   const [goals, setGoals] = useState<ApiGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState('Unavailable');
+  const [userEmail, setUserEmail] = useState('Unavailable');
+  const [healthScore, setHealthScore] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,10 +34,13 @@ export default function Profile() {
       try {
         setLoading(true);
         setError(null);
+        setUserName(localStorage.getItem('user_name') || 'Unavailable');
+        setUserEmail(localStorage.getItem('user_email') || 'Unavailable');
 
-        const [summaryData, goalData] = await Promise.all([
+        const [summaryData, goalData, digitalTwinData] = await Promise.all([
           apiRequest('/api/transactions/summary/'),
           apiRequest('/api/savings-goals/'),
+          apiRequest('/api/digital-twin/'),
         ]);
 
         if (cancelled) return;
@@ -44,6 +50,11 @@ export default function Profile() {
           total_expense: Number(summaryData.total_expense),
           balance: Number(summaryData.balance),
         });
+        setHealthScore(
+          digitalTwinData.healthScore !== undefined
+            ? Number(digitalTwinData.healthScore)
+            : null
+        );
 
         const apiGoals: ApiGoal[] = goalData.savings_goals ?? goalData;
         setGoals(apiGoals);
@@ -69,22 +80,22 @@ export default function Profile() {
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-blue-600/20 blur-[80px]" />
         <div className="relative flex flex-col md:flex-row items-center gap-6">
           <div className="relative">
-            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-4xl font-bold text-white glow-purple">?</div>
+            <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-4xl font-bold text-white glow-purple">{userName !== 'Unavailable' ? userName.charAt(0).toUpperCase() : '?'}</div>
             <div className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full glass-strong flex items-center justify-center">
               <Trophy className="w-4 h-4 text-amber-400" />
             </div>
           </div>
           <div className="flex-1 text-center md:text-left">
             <div className="flex items-center gap-2 justify-center md:justify-start">
-              <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Unavailable</h1>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{userName}</h1>
               <Badge variant="info"><Sparkles className="w-3 h-3" /> Pro Member</Badge>
             </div>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Unavailable</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{userEmail}</p>
             <div className="mt-4 flex flex-wrap gap-3 justify-center md:justify-start">
               <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Score</span>
-                <span className="font-bold text-gradient-emerald">Unavailable</span>
+                <span className="font-bold text-gradient-emerald">{healthScore !== null ? `${healthScore}/100` : 'Unavailable'}</span>
               </div>
               <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-400" />
