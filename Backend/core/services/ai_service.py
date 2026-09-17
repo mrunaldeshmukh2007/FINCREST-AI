@@ -7,16 +7,71 @@ class AIServiceError(Exception):
 
 
 def generate_financial_response(question, transactions):
-    """
-    Generate answers for the 5 predefined financial questions
-    using only the user's transaction data.
-    """
+    api_key = os.getenv("AI_API_KEY")
+    if not api_key:
+        raise AIServiceError("AI service is not configured. Set AI_API_KEY on the backend.")
 
-    question = question.strip().lower()
+    api_url = os.getenv(
+        "AI_API_URL",
+        "https://api.openai.com/v1/chat/completions",
+    )
+    model = os.getenv("AI_MODEL", "gpt-4o-mini")
 
-    # Calculate totals
-    total_income = 0.0
-    total_expense = 0.0
+    transaction_context = _build_transaction_context(transactions)
+    payload = {
+        "model": model,
+        "temperature": 0.2,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are FinCrest AI, a careful personal finance coach. "
+                    "Answer the user's question using only the authenticated user's transaction data "
+                    "provided below. Never invent amounts, merchants, dates, balances, investments, "
+                    "or goals. If the data is insufficient, say so clearly and explain what the user "
+                    "should add. Give practical, non-guaranteed financial guidance and do not present "
+                    "investment advice as a certainty. Keep the response concise and readable.\n\n"
+                    f"Authenticated user's transaction data:\n{transaction_context}"
+                ),
+            },
+            {"role": "user", "content": question},
+        ],
+    }
+
+    request = Request(
+        api_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        raise AIServiceError(f"AI provider request failed with status {error.code}.") from error
+    except (URLError, TimeoutError, json.JSONDecodeError) as error:
+        raise AIServiceError("AI provider could not be reached.") from error
+
+    try:
+        answer = response_data["choices"][0]["message"]["content"].strip()
+    except (KeyError, IndexError, AttributeError) as error:
+        raise AIServiceError("AI provider returned an invalid response.") from error
+
+    if not answer:
+        raise AIServiceError("AI provider returned an empty response.")
+
+    return answer
+
+
+def _build_transaction_context(transactions):
+    if not transactions:
+        return "No transactions have been recorded yet."
+
+    totals = defaultdict(float)
     category_totals = defaultdict(float)
 
     for transaction in transactions:

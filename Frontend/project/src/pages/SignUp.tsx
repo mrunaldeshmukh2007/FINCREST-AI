@@ -4,17 +4,46 @@ import { useState } from 'react';
 import { Mail, Lock, User, Phone, Globe, Coins, Eye, EyeOff, ArrowRight, Check, Sparkles, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { apiRequest } from '@/lib/api';
 
 export default function SignUp() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccess(true);
-    setTimeout(() => navigate('/onboarding'), 2200);
-  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  	e.preventDefault();
+  	setError('');
+
+  	if (password !== confirmPassword) {
+    		setError('Passwords do not match.');
+   		return;
+  	}
+
+  	try {
+    		await apiRequest('/api/signup/', {
+      			method: 'POST',
+      			body: JSON.stringify({
+        			full_name: fullName,
+        			email,
+        			password,
+      			}),
+    		});
+
+   		setSuccess(true);
+
+    		setTimeout(() => navigate('/onboarding'), 2200);
+  	} catch (err) {
+    		setError(err instanceof Error ? err.message : 'Account creation failed.');
+  	}
+      };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative">
@@ -52,27 +81,62 @@ export default function SignUp() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field icon={<User className="w-4 h-4" />} label="Full Name" placeholder="Arjun Sharma" type="text" />
-              <Field icon={<Mail className="w-4 h-4" />} label="Email" placeholder="you@example.com" type="email" />
+              <Field
+  		icon={<User className="w-4 h-4" />}
+  		label="Full Name"
+  		placeholder="Arjun Sharma"
+  		type="text"
+  		value={fullName}
+  		onChange={(e) => setFullName(e.target.value)}
+	     />
+              <Field
+  		icon={<Mail className="w-4 h-4" />}
+  		label="Email"
+  		placeholder="you@example.com"
+  		type="email"
+  		value={email}
+  		onChange={(e) => setEmail(e.target.value)}
+  	      />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Password</label>
                 <div className="relative mt-1.5">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-                  <input type={showPassword ? 'text' : 'password'} placeholder="••••••••" required className="w-full glass rounded-2xl pl-10 pr-10 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+                 <input
+  type={showPassword ? 'text' : 'password'}
+  placeholder="••••••••"
+  required
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full glass rounded-2xl pl-10 pr-10 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+  style={{ color: 'var(--text-primary)' }}
+/>
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
-              <Field icon={<Lock className="w-4 h-4" />} label="Confirm Password" placeholder="••••••••" type="password" />
+              <Field
+  icon={<Lock className="w-4 h-4" />}
+  label="Confirm Password"
+  placeholder="••••••••"
+  type="password"
+  value={confirmPassword}
+  onChange={(e) => setConfirmPassword(e.target.value)}
+/>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <Field icon={<Phone className="w-4 h-4" />} label="Phone" placeholder="+91 98765 43210" type="tel" />
               <SelectField icon={<Globe className="w-4 h-4" />} label="Country" options={['India', 'United States', 'United Kingdom', 'Singapore', 'UAE']} />
             </div>
             <SelectField icon={<Coins className="w-4 h-4" />} label="Preferred Currency" options={['₹ INR (Indian Rupee)', '$ USD (US Dollar)', '€ EUR (Euro)', '£ GBP (Pound Sterling)']} />
+
+{error && (
+  <p className="text-sm text-red-400">
+    {error}
+  </p>
+)}
 
             <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
               <input type="checkbox" required className="mt-0.5 rounded accent-blue-600" />
@@ -91,13 +155,14 @@ export default function SignUp() {
   );
 }
 
-function Field({ icon, label, placeholder, type }: { icon: React.ReactNode; label: string; placeholder: string; type: string }) {
+function Field({ icon, label, placeholder, type, value, onChange }: { icon: React.ReactNode; label: string; placeholder: string; type: string; value?: string; onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
+
   return (
     <div>
       <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</label>
       <div className="relative mt-1.5">
         <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>{icon}</div>
-        <input type={type} placeholder={placeholder} required className="w-full glass rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+        <input type={type} placeholder={placeholder} required value={value} onChange={onChange} className="w-full glass rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
       </div>
     </div>
   );
