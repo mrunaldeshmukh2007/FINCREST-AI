@@ -8,123 +8,199 @@ class AIServiceError(Exception):
 
 def generate_financial_response(question, transactions):
     """
-    Rule-based financial coach.
-    Supports five predefined financial questions.
+    Generate answers for the 5 predefined financial questions
+    using only the user's transaction data.
     """
-
-    if not question:
-        raise AIServiceError("Please select a financial question.")
 
     question = question.strip().lower()
 
+    # Calculate totals
+    total_income = 0.0
+    total_expense = 0.0
+    category_totals = defaultdict(float)
+
+    for transaction in transactions:
+        amount = float(transaction.amount)
+
+        if transaction.transaction_type == "income":
+            total_income += amount
+
+        elif transaction.transaction_type == "expense":
+            total_expense += amount
+
+            category = transaction.category or "Other"
+            category_totals[category] += amount
+
+    savings = total_income - total_expense
+
     # ---------------------------------------------------------
     # QUESTION 1
+    # How can I reduce my spending?
     # ---------------------------------------------------------
     if question == "how can i reduce my spending?":
+
+        if total_expense == 0:
+            return (
+                "You have no recorded expenses yet. "
+                "Add some expense transactions to receive spending insights."
+            )
+
+        if not category_totals:
+            return (
+                "Start recording expenses by category. "
+                "This will help identify where you can reduce spending."
+            )
+
+        highest_category = max(
+            category_totals,
+            key=category_totals.get
+        )
+
+        highest_amount = category_totals[highest_category]
+
         return (
-            "To reduce your spending, start by reviewing your expense categories "
-            "and identifying non-essential purchases. Set monthly limits for "
-            "discretionary expenses and prioritize needs over wants. "
-            "Regularly tracking your expenses can help you stay within your budget."
+            f"Your highest spending category is {highest_category}, "
+            f"with ₹{highest_amount:,.2f} spent. "
+            f"Review your expenses in this category and try to reduce "
+            f"non-essential spending."
         )
 
     # ---------------------------------------------------------
     # QUESTION 2
+    # Where am I spending the most?
     # ---------------------------------------------------------
-    if question == "how can i save more money?":
+    elif question == "where am i spending the most?":
+
+        if not category_totals:
+            return "You have no recorded expenses yet."
+
+        highest_category = max(
+            category_totals,
+            key=category_totals.get
+        )
+
+        highest_amount = category_totals[highest_category]
+
         return (
-            "To save more money, set aside a fixed portion of your income before "
-            "spending on non-essential items. Track your expenses, reduce "
-            "unnecessary purchases, and set a realistic monthly savings goal. "
-            "Consistency is more important than saving a large amount at once."
+            f"You are spending the most on {highest_category}: "
+            f"₹{highest_amount:,.2f}."
         )
 
     # ---------------------------------------------------------
     # QUESTION 3
+    # How much have I saved?
     # ---------------------------------------------------------
-    if question == "am i spending too much?":
-        total_income = 0
-        total_expense = 0
-
-        for transaction in transactions:
-            amount = float(transaction.amount)
-
-            if transaction.transaction_type == "income":
-                total_income += amount
-            elif transaction.transaction_type == "expense":
-                total_expense += amount
+    elif question == "how much have i saved?":
 
         if total_income == 0:
             return (
-                "There is not enough income data to determine whether your "
-                "spending is too high. Add your income transactions first."
+                "No income has been recorded yet, "
+                "so your savings cannot be calculated."
             )
 
-        if total_expense > total_income:
+        if savings > 0:
             return (
-                f"Your recorded expenses are ₹{total_expense:.2f}, while your "
-                f"recorded income is ₹{total_income:.2f}. Your expenses are "
-                "currently higher than your income. Consider reducing "
-                "non-essential spending and reviewing your budget."
+                f"Your current recorded savings are "
+                f"₹{savings:,.2f} "
+                f"(income ₹{total_income:,.2f} minus expenses "
+                f"₹{total_expense:,.2f})."
             )
 
-        spending_percentage = (total_expense / total_income) * 100
+        elif savings == 0:
+            return (
+                "Your recorded income and expenses are equal. "
+                "Your current savings are ₹0.00."
+            )
 
-        return (
-            f"Your recorded expenses are ₹{total_expense:.2f} against income "
-            f"of ₹{total_income:.2f}. You are using approximately "
-            f"{spending_percentage:.1f}% of your recorded income on expenses. "
-            "Review your spending categories regularly and keep enough room "
-            "for savings and unexpected expenses."
-        )
+        else:
+            return (
+                f"Your expenses exceed your recorded income by "
+                f"₹{abs(savings):,.2f}."
+            )
 
     # ---------------------------------------------------------
     # QUESTION 4
+    # What is my biggest expense category?
     # ---------------------------------------------------------
-    if question == "how should i create a budget?":
+    elif question == "what is my biggest expense category?":
+
+        if not category_totals:
+            return "You have no recorded expenses yet."
+
+        highest_category = max(
+            category_totals,
+            key=category_totals.get
+        )
+
+        highest_amount = category_totals[highest_category]
+
         return (
-            "Start by recording your monthly income and essential expenses. "
-            "Then allocate part of the remaining amount toward savings and "
-            "discretionary spending. Set limits for major expense categories "
-            "and compare your actual spending with your planned budget regularly."
+            f"Your biggest expense category is "
+            f"{highest_category}, totaling "
+            f"₹{highest_amount:,.2f}."
         )
 
     # ---------------------------------------------------------
     # QUESTION 5
+    # What should I improve in my spending?
     # ---------------------------------------------------------
-    if question == "where am i spending the most?":
-        category_totals = defaultdict(float)
+    elif question == "what should i improve in my spending?":
 
-        for transaction in transactions:
-            if transaction.transaction_type == "expense":
-                category = transaction.category or "Other"
-                category_totals[category] += float(transaction.amount)
+        if total_expense == 0:
+            return (
+                "There are no recorded expenses yet. "
+                "Start tracking your expenses to identify areas "
+                "that can be improved."
+            )
 
         if not category_totals:
             return (
-                "There are no expense transactions available yet. "
-                "Add some expenses to see your highest spending category."
+                "Add categories to your expense transactions "
+                "so your spending patterns can be analyzed."
             )
 
-        highest_category, highest_amount = max(
-            category_totals.items(),
-            key=lambda item: item[1]
+        highest_category = max(
+            category_totals,
+            key=category_totals.get
         )
 
-        return (
-            f"Your highest recorded spending category is "
-            f"{highest_category}, with ₹{highest_amount:.2f} spent. "
-            "Review this category and check whether any expenses can be reduced."
-        )
+        highest_amount = category_totals[highest_category]
+
+        if total_income > 0:
+            savings_rate = (savings / total_income) * 100
+        else:
+            savings_rate = 0
+
+        if savings_rate < 0:
+            return (
+                f"Your expenses currently exceed your income. "
+                f"Focus first on reducing your highest spending "
+                f"category, {highest_category}, where you spent "
+                f"₹{highest_amount:,.2f}."
+            )
+
+        elif savings_rate < 20:
+            return (
+                f"Your savings rate is approximately "
+                f"{savings_rate:.1f}%. "
+                f"Consider reducing spending in your highest "
+                f"category, {highest_category}, and increasing "
+                f"your monthly savings."
+            )
+
+        else:
+            return (
+                f"Your current savings rate is approximately "
+                f"{savings_rate:.1f}%. "
+                f"Your spending appears relatively controlled. "
+                f"Continue monitoring your highest expense category, "
+                f"{highest_category}."
+            )
 
     # ---------------------------------------------------------
-    # ANY OTHER QUESTION
+    # Anything other than the 5 questions
     # ---------------------------------------------------------
-    return (
-        "Please select one of the five available financial questions: "
-        "How can I reduce my spending? "
-        "How can I save more money? "
-        "Am I spending too much? "
-        "How should I create a budget? "
-        "Where am I spending the most?"
-    )
+    else:
+        raise AIServiceError(
+            "Please select one of the five available financial questions."
+        )
