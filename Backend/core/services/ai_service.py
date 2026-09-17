@@ -55,7 +55,9 @@ def generate_financial_response(question, transactions):
         with urlopen(request, timeout=30) as response:
             response_data = json.loads(response.read().decode("utf-8"))
     except HTTPError as error:
-        raise AIServiceError(f"AI provider request failed with status {error.code}.") from error
+        raise AIServiceError(
+         f"AI provider request failed with status {error.code}."
+        ) from error
     except (URLError, TimeoutError, json.JSONDecodeError) as error:
         raise AIServiceError("AI provider could not be reached.") from error
 
