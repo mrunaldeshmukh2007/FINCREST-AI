@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from "../../lib/api";
 import {
   Search, Filter, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
@@ -42,6 +43,7 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [searchParams] = useSearchParams();
 
   const perPage = 8;
 
@@ -63,6 +65,11 @@ export default function Transactions() {
 
     loadTransactions();
   }, []);
+  useEffect(() => {
+  if (searchParams.get('quickAdd') === 'true') {
+    setShowAdd(true);
+  }
+}, [searchParams]);
 
   const refreshTransactions = async () => {
     const data = await apiRequest('/api/transactions/');
@@ -85,6 +92,37 @@ export default function Transactions() {
     setEditing(transaction);
     setShowAdd(true);
   };
+  
+  const handleExportCSV = () => {
+  const headers = ['Merchant', 'Category', 'Amount', 'Type', 'Status', 'Payment Mode', 'Date'];
+
+  const rows = transactions.map((t) => [
+    t.merchant,
+    t.category,
+    t.amount,
+    t.type,
+    t.status,
+    t.paymentMode,
+    t.date,
+  ]);
+
+  const csv = [headers, ...rows]
+    .map((row) =>
+      row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')
+    )
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'fincrest-transactions.csv';
+  link.click();
+
+  URL.revokeObjectURL(url);
+};
+
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
       const matchSearch = t.merchant.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase());
@@ -107,7 +145,14 @@ export default function Transactions() {
           {error && <p className="text-sm mt-2 text-red-400">{error}</p>}
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />}>Export CSV</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Download className="w-4 h-4" />}
+            onClick={handleExportCSV}
+          >
+            Export CSV
+          </Button>
           <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setShowAdd(true)}>Add Transaction</Button>
         </div>
       </div>
@@ -320,7 +365,7 @@ function AddModal({
               {['Food', 'Shopping', 'Bills', 'Travel', 'Salary', 'Investments'].map(c => <option key={c} className="bg-slate-900">{c}</option>)}
             </select>
           </div>
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (₹)" required min="0.01" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (₹)" required min="0" className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
           <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as Transaction['paymentMode'])} className="w-full glass rounded-xl px-4 py-2.5 text-sm outline-none" style={{ color: 'var(--text-primary)' }}>
             {['UPI', 'Card', 'Bank Transfer', 'Cash', 'Wallet'].map(m => <option key={m} className="bg-slate-900">{m}</option>)}
           </select>

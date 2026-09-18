@@ -1,12 +1,14 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, PiggyBank, Target, Brain, Bot,
   ScanLine, BarChart3, FileText, BellRing, User, Settings, Sparkles,
   Search, Plus, Menu, X, LogOut, ChevronRight,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { apiRequest } from '@/lib/api';
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -105,26 +107,227 @@ function SidebarLink({ to, label, icon: Icon, end, highlight, onClick }: any) {
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const navigate = useNavigate();
+
+  const [search, setSearch] = useState('');
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadSearchData = async () => {
+      try {
+        const transactionData = await apiRequest('/api/transactions/');
+        const apiTransactions =
+          transactionData.transactions ?? transactionData;
+        setTransactions(apiTransactions);
+      } catch {
+        setTransactions([]);
+      }
+
+      try {
+        const goalData = await apiRequest('/api/savings-goals/');
+        setGoals(goalData.savings_goals ?? []);
+      } catch {
+        setGoals([]);
+      }
+    };
+
+    loadSearchData();
+  }, []);
+
+  const query = search.trim().toLowerCase();
+
+  const matchingTransactions = query
+    ? transactions
+        .filter(
+          (transaction) =>
+            String(transaction.description || '')
+              .toLowerCase()
+              .includes(query) ||
+            String(transaction.category || '')
+              .toLowerCase()
+              .includes(query)
+        )
+        .slice(0, 5)
+    : [];
+
+  const matchingGoals = query
+    ? goals
+        .filter((goal) =>
+          String(goal.name || '').toLowerCase().includes(query)
+        )
+        .slice(0, 5)
+    : [];
+
+  const handleAskAI = () => {
+    if (!search.trim()) return;
+    navigate('/app/ai-coach');
+    setSearch('');
+  };
+
+  const hasResults =
+    matchingTransactions.length > 0 ||
+    matchingGoals.length > 0 ||
+    query.length > 0;
+
   return (
     <header className="sticky top-0 z-30 glass-strong border-b">
       <div className="flex items-center gap-3 px-4 md:px-6 h-16">
-        <button className="lg:hidden" onClick={onMenuClick}><Menu className="w-5 h-5" /></button>
+        <button
+          className="lg:hidden"
+          onClick={onMenuClick}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
 
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-          <input placeholder="Search transactions, goals, ask AI..." className="w-full glass rounded-xl pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50" style={{ color: 'var(--text-primary)' }} />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--text-muted)' }}
+          />
+
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+                  if (e.key === 'Enter' && search.trim()) {
+                    handleAskAI();
+                  }
+                }}
+                placeholder="Search transactions, goals, ask AI..."
+                className="w-full glass rounded-xl pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+                style={{ color: 'var(--text-primary)' }}
+              />
+
+          {hasResults && (
+            <div
+              className="absolute top-full left-0 right-0 mt-2 rounded-2xl glass-strong border overflow-hidden z-50"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              {matchingTransactions.length > 0 && (
+                <div className="p-2">
+                  <p
+                    className="px-3 py-2 text-xs font-semibold"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Transactions
+                  </p>
+
+                  {matchingTransactions.map((transaction) => (
+                    <button
+                      key={`transaction-${transaction.id}`}
+                      onClick={() => {
+                        navigate('/app/transactions');
+                        setSearch('');
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/5"
+                    >
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {transaction.description ||
+                          transaction.category}
+                      </p>
+
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        {transaction.category}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {matchingGoals.length > 0 && (
+                <div
+                  className="p-2 border-t"
+                  style={{ borderColor: 'var(--border)' }}
+                >
+                  <p
+                    className="px-3 py-2 text-xs font-semibold"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Goals
+                  </p>
+
+                  {matchingGoals.map((goal) => (
+                    <button
+                      key={`goal-${goal.id}`}
+                      onClick={() => {
+                        navigate('/app/goals');
+                        setSearch('');
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/5"
+                    >
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {goal.name}
+                      </p>
+
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        Savings goal
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={handleAskAI}
+                className="w-full text-left px-3 py-3 border-t hover:bg-white/5"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Ask AI about "{search.trim()}"
+                </p>
+
+                <p
+                  className="text-xs"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Open AI Coach
+                </p>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 md:gap-3 ml-auto">
-          <button onClick={() => navigate('/app/notifications')} className="relative w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-white/5">
-            <BellRing className="w-4.5 h-4.5" style={{ color: 'var(--text-secondary)' }} />
+          <button
+            onClick={() => navigate('/app/notifications')}
+            className="relative w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-white/5"
+          >
+            <BellRing
+              className="w-4.5 h-4.5"
+              style={{ color: 'var(--text-secondary)' }}
+            />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
           </button>
+
           <ThemeToggle />
-          <button onClick={() => navigate('/app/transactions')} className="btn-primary rounded-xl px-3 md:px-4 py-2 text-sm font-semibold flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> <span className="hidden md:inline">Quick Add</span>
+
+          <button
+            onClick={() => navigate('/app/transactions?quickAdd=true')}
+            className="btn-primary rounded-xl px-3 md:px-4 py-2 text-sm font-semibold flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden md:inline">Quick Add</span>
           </button>
-          <button onClick={() => navigate('/app/profile')} className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+
+          <button
+            onClick={() => navigate('/app/profile')}
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm"
+          >
             {(localStorage.getItem('user_name') || 'User')
               .split(' ')
               .map((name) => name[0])
@@ -136,4 +339,4 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
     </header>
   );
-}
+}  
