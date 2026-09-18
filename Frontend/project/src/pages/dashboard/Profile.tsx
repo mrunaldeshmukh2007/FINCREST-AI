@@ -26,6 +26,11 @@ export default function Profile() {
   const [userName, setUserName] = useState('Unavailable');
   const [userEmail, setUserEmail] = useState('Unavailable');
   const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [streak, setStreak] = useState<number | null>(null);
+  const [daysActive, setDaysActive] = useState<number | null>(null);
+  const [achievements, setAchievements] = useState<
+  { title: string; description: string }[]
+>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,10 +42,13 @@ export default function Profile() {
         setUserName(localStorage.getItem('user_name') || 'Unavailable');
         setUserEmail(localStorage.getItem('user_email') || 'Unavailable');
 
-        const [summaryData, goalData, digitalTwinData] = await Promise.all([
+        const [summaryData, goalData, digitalTwinData, streakData, daysActiveData, achievementsData] = await Promise.all([
           apiRequest('/api/transactions/summary/'),
           apiRequest('/api/savings-goals/'),
           apiRequest('/api/digital-twin/'),
+          apiRequest('/api/transactions/streak/'),
+          apiRequest('/api/transactions/days-active/'),
+          apiRequest('/api/transactions/achievements/'),
         ]);
 
         if (cancelled) return;
@@ -54,6 +62,23 @@ export default function Profile() {
           digitalTwinData.healthScore !== undefined
             ? Number(digitalTwinData.healthScore)
             : null
+        );
+        setStreak(
+          streakData.streak !== undefined
+            ? Number(streakData.streak)
+            : null
+        );
+
+        setDaysActive(
+          daysActiveData.days_active !== undefined
+            ? Number(daysActiveData.days_active)
+            : null
+        );
+
+        setAchievements(
+          achievementsData.achievements !== undefined
+            ? achievementsData.achievements
+            : []
         );
 
         const apiGoals: ApiGoal[] = goalData.savings_goals ?? goalData;
@@ -100,7 +125,9 @@ export default function Profile() {
               <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-400" />
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Streak</span>
-                <span className="font-bold text-orange-400">Unavailable</span>
+                <span className="font-bold text-orange-400">
+                  {streak !== null ? `${streak} days` : 'Unavailable'}
+                </span>
               </div>
               <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
                 <Target className="w-4 h-4 text-blue-400" />
@@ -132,8 +159,8 @@ export default function Profile() {
             {[
               { label: 'Total Saved', value: summary.balance, icon: Target, color: '#10B981' },
               { label: 'Goals Completed', value: completedGoals, icon: Trophy, color: '#F59E0B' },
-              { label: 'Achievements', value: 'Unavailable', icon: Award, color: '#7C3AED' },
-              { label: 'Days Active', value: 'Unavailable', icon: Flame, color: '#EF4444' },
+              { label: 'Achievements', value: achievements.length, icon: Award, color: '#7C3AED' },
+              { label: 'Days Active', value: daysActive !== null ? `${daysActive} days` : 'Unavailable', icon: Flame, color: '#EF4444' },
             ].map((stat, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass rounded-2xl p-5">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: `${stat.color}20`, color: stat.color }}>
@@ -148,8 +175,44 @@ export default function Profile() {
           {/* Achievements */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl p-6">
             <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Achievements & Badges</h3>
-            <div className="flex items-center justify-center py-8">
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No achievements available yet.</p>
+            <div className="space-y-3">
+              {achievements.length > 0 ? (
+                achievements.map((achievement, index) => (
+                  <div
+                    key={index}
+                    className="glass rounded-2xl p-4 flex items-center gap-4"
+                  >
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-500/20">
+                      <Award className="w-5 h-5 text-purple-400" />
+                    </div>
+
+                    <div>
+                      <p
+                        className="font-semibold"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        {achievement.title}
+                      </p>
+
+                      <p
+                        className="text-sm mt-1"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        {achievement.description}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <p
+                    className="text-sm"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    No achievements available yet.
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
 

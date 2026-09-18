@@ -315,6 +315,101 @@ def transaction_summary(request):
         'balance': str(balance)
     }, status=200)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def transaction_streak(request):
+    transactions = Transaction.objects.filter(
+        user=request.user
+    ).values_list('date', flat=True).distinct().order_by('-date')
+
+    dates = list(transactions)
+
+    if not dates:
+        return JsonResponse({
+            'streak': 0
+        }, status=200)
+
+    from datetime import date, timedelta
+
+    today = date.today()
+
+    # If the user has no activity today, the current streak is 0.
+    if dates[0] != today:
+        return JsonResponse({
+            'streak': 0
+        }, status=200)
+
+    streak = 1
+    current_date = today
+
+    for transaction_date in dates[1:]:
+        expected_date = current_date - timedelta(days=1)
+
+        if transaction_date == expected_date:
+            streak += 1
+            current_date = transaction_date
+        else:
+            break
+
+    return JsonResponse({
+        'streak': streak
+    }, status=200)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def days_active(request):
+    active_days = Transaction.objects.filter(
+        user=request.user
+    ).values('date').distinct().count()
+
+    return JsonResponse({
+        'days_active': active_days
+    }, status=200)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_achievements(request):
+    transactions = Transaction.objects.filter(
+        user=request.user
+    )
+
+    active_days = transactions.values('date').distinct().count()
+    transaction_count = transactions.count()
+    goal_count = SavingsGoal.objects.filter(
+        user=request.user
+    ).count()
+
+    achievements = []
+
+    if transaction_count >= 1:
+        achievements.append({
+            'title': 'First Transaction',
+            'description': 'Recorded your first transaction.'
+        })
+
+    if active_days >= 5:
+        achievements.append({
+            'title': '5 Active Days',
+            'description': 'Recorded transactions on 5 different days.'
+        })
+
+    if transaction_count >= 10:
+        achievements.append({
+            'title': '10 Transactions',
+            'description': 'Recorded 10 transactions.'
+        })
+
+    if goal_count >= 1:
+        achievements.append({
+            'title': 'Goal Setter',
+            'description': 'Created your first savings goal.'
+        })
+
+    return JsonResponse({
+        'achievements': achievements
+    }, status=200)
+
+
 def build_savings_prediction_features(user, bundle):
     transactions = Transaction.objects.filter(
         user=user
