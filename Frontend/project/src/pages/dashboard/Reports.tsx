@@ -311,7 +311,7 @@ export default function Reports() {
                     borderRadius: 12,
                     color: '#fff',
                   }}
-                  formatter={(v: any) => formatINR(Number(v))}
+                  formatter={(v: string | number) => formatINR(Number(v))}
                   cursor={{ fill: 'rgba(148,163,184,0.05)' }}
                 />
 
@@ -356,7 +356,7 @@ export default function Reports() {
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
-                      label={(e: any) => `${e.name}`}
+                      label={(e: { name?: string }) => `${e.name ?? ''}`}
                     >
                       {categoryData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
@@ -370,7 +370,7 @@ export default function Reports() {
                         borderRadius: 12,
                         color: '#fff',
                       }}
-                      formatter={(v: any) => formatINR(Number(v))}
+                      formatter={(v: string | number) => formatINR(Number(v))}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -432,7 +432,7 @@ export default function Reports() {
                       borderRadius: 12,
                       color: '#fff',
                     }}
-                    formatter={(v: any) => formatINR(Number(v))}
+                    formatter={(v: string | number) => formatINR(Number(v))}
                   />
 
                   <Line

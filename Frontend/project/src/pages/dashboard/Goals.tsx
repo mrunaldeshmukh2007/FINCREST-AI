@@ -32,6 +32,15 @@ type GoalForm = {
   target_date: string;
 };
 
+type SavingsGoalApi = {
+  id: number;
+  name: string;
+  target_amount: number | string;
+  saved_amount: number | string;
+  monthly_contribution: number | string;
+  target_date: string | null;
+};
+
 const API_URL = 'http://127.0.0.1:8000/api/savings-goals';
 
 export default function Goals() {
@@ -72,7 +81,7 @@ export default function Goals() {
       const data = await response.json();
 
       const formattedGoals = (data.savings_goals || []).map(
-        (goal: any) => ({
+        (goal: SavingsGoalApi) => ({
           id: goal.id,
           name: goal.name,
           target_amount: Number(goal.target_amount),

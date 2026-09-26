@@ -1,11 +1,11 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ArrowLeftRight, PiggyBank, Target, Brain, Bot,
   ScanLine, BarChart3, FileText, BellRing, User, Settings, Sparkles,
-  Search, Plus, Menu, X, LogOut, ChevronRight,
+  Search, Plus, Menu, X, LogOut,
+  type LucideIcon,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { apiRequest } from '@/lib/api';
@@ -89,7 +89,21 @@ export default function DashboardLayout() {
   );
 }
 
-function SidebarLink({ to, label, icon: Icon, end, highlight, onClick }: any) {
+function SidebarLink({
+  to,
+  label,
+  icon: Icon,
+  end,
+  highlight,
+  onClick,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  highlight?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <NavLink to={to} end={end} onClick={onClick} className={({ isActive }) => `group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-400' : 'hover:bg-white/5'}`} style={{ color: 'var(--text-secondary)' }}>
       {({ isActive }) => (
@@ -109,8 +123,15 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [goals, setGoals] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<{
+  id: number | string;
+  description?: string;
+  category?: string;
+}[]>([]);
+  const [goals, setGoals] = useState<{
+  id: number | string;
+  name?: string;
+}[]>([]);
 
   useEffect(() => {
     const loadSearchData = async () => {

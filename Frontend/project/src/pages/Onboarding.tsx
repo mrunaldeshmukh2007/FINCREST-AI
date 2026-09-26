@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Sparkles, Wallet, TrendingDown, Target, Trophy, Check, ArrowRight, ArrowLeft, Home, Car, Plane, Shield, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { formatINR } from '@/lib/utils';
 
 const steps = ['Welcome', 'Income', 'Expenses', 'Savings', 'Goal', 'Finish'];
 const goalOptions = [

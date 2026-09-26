@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { Upload, Camera, ScanLine, Sparkles, Check, FileText, X } from 'lucide-react';
+import { Upload, Camera, Sparkles, Check, FileText, X } from 'lucide-react';
 import { receiptData } from '@/lib/data';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/SectionHeading';

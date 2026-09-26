@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Mail, Lock, User, Phone, Globe, Coins, Eye, EyeOff, ArrowRight, Check, Sparkles, PartyPopper } from 'lucide-react';
+import { Mail, Lock, User, Phone, Globe, Coins, Eye, EyeOff, ArrowRight, Sparkles, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { apiRequest } from '@/lib/api';

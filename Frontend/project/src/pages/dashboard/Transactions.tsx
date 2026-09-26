@@ -3,8 +3,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiRequest } from "../../lib/api";
 import {
-  Search, Filter, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
-  ArrowDownRight, Sparkles, ChevronLeft, ChevronRight, X, FileText,
+  Search, Download, Plus, Edit2, Trash2, Eye, ArrowUpRight,
+  ArrowDownRight, Sparkles, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/SectionHeading';
 import { Button } from '@/components/ui/Button';

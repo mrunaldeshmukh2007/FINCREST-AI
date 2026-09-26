@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadialBarChart, RadialBar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, 
 } from 'recharts';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/SectionHeading';
@@ -222,7 +222,7 @@ export default function DashboardHome() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
               <XAxis dataKey="month" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
-              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} />
+              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: string | number) => formatINR(Number(v))} />
               <Area type="monotone" dataKey="income" stroke="#2563EB" strokeWidth={2} fill="url(#incomeGrad)" />
               <Area type="monotone" dataKey="expense" stroke="#7C3AED" strokeWidth={2} fill="url(#expenseGrad)" />
             </AreaChart>
@@ -237,8 +237,8 @@ export default function DashboardHome() {
             <PieChart>
               <Pie data={categoryDistribution} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
                 {categoryDistribution.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-              </Pie>
-              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} />
+              </Pie>formatter={(v: string | number) => formatINR(Number(v))}
+              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }}  />
             </PieChart>
           </ResponsiveContainer> : <EmptyChart message="No spending categories available." />}
           {hasData && <div className="mt-2 space-y-1.5">
@@ -261,7 +261,7 @@ export default function DashboardHome() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
               <XAxis dataKey="day" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
-              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} cursor={{ fill: 'rgba(148,163,184,0.05)' }} />
+              <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: string | number) => formatINR(Number(v))} cursor={{ fill: 'rgba(148,163,184,0.05)' }} />
               <Bar dataKey="inflow" fill="#10B981" radius={[6,6,0,0]} />
               <Bar dataKey="outflow" fill="#EF4444" radius={[6,6,0,0]} />
             </BarChart>

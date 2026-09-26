@@ -179,7 +179,7 @@ export default function Insights() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                     <XAxis dataKey="month" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
-                    <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} />
+                    <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: unknown) => formatINR(Number(v))} />
                     <Area type="monotone" dataKey="savings" stroke="#10B981" strokeWidth={2} fill="url(#savGrad)" />
                     <Area type="monotone" dataKey="invested" stroke="#7C3AED" strokeWidth={2} fill="url(#invGrad)" />
                   </AreaChart>
@@ -198,7 +198,7 @@ export default function Insights() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                     <XAxis dataKey="day" stroke="rgba(148,163,184,0.5)" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="rgba(148,163,184,0.5)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatINR(v, true)} />
-                    <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: any) => formatINR(Number(v))} cursor={{ fill: 'rgba(148,163,184,0.05)' }} />
+                    <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff' }} formatter={(v: unknown) => formatINR(Number(v))} cursor={{ fill: 'rgba(148,163,184,0.05)' }} />
                     <Bar dataKey="weekday" stackId="a" fill="#2563EB" radius={[6,6,0,0]} />
                     <Bar dataKey="weekend" stackId="a" fill="#7C3AED" radius={[6,6,0,0]} />
                   </BarChart>

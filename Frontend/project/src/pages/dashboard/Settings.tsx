@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import {
-  Palette, Coins, Globe, Bell, Shield, Key, Lock, Eye, EyeOff,
+  Palette, Globe, Bell, Shield, Key, Lock, Eye, EyeOff,
   Building2, Trash2, Check, ChevronRight,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
