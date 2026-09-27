@@ -6,6 +6,8 @@ import { formatINR, formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/SectionHeading';
 import { Button } from '@/components/ui/Button';
 
+const API_URL = "https://fincrest-ai-2.onrender.com/api";
+
 export default function Goals() {
   const [confetti, setConfetti] = useState(false);
   const completedGoal = goals.find(g => (g.saved / g.target) >= 0.8 && (g.saved / g.target) < 1);

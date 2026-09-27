@@ -34,12 +34,9 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 # ============================================================
 
 ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv(
-        "ALLOWED_HOSTS",
-        "localhost,127.0.0.1"
-    ).split(",")
-    if host.strip()
+    "localhost",
+    "127.0.0.1",
+    "fincrest-ai-2.onrender.com",
 ]
 
 
@@ -71,14 +68,14 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
 
-    # WhiteNoise for production static files
+    "corsheaders.middleware.CorsMiddleware",
+
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
 
-    "corsheaders.middleware.CorsMiddleware",
-
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -246,14 +243,10 @@ REST_FRAMEWORK = {
 # ============================================================
 
 CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if origin.strip()
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://fincrest-ai-frontend.onrender.com",
 ]
-
 
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -264,18 +257,23 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
 
 # ============================================================
 # CSRF
 # ============================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CSRF_TRUSTED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if origin.strip()
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://fincrest-ai-frontend.onrender.com",
 ]
 
 
