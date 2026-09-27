@@ -41,8 +41,7 @@ type SavingsGoalApi = {
   target_date: string | null;
 };
 
-const API_URL = 'http://127.0.0.1:8000/api/savings-goals';
-
+const API_URL = 'https://fincrest-ai-2.onrender.com/api';
 export default function Goals() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [showAddGoal, setShowAddGoal] = useState(false);
@@ -67,7 +66,7 @@ export default function Goals() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/`, {
+      const response = await fetch(`${API_URL}/savings-goals/`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -131,7 +130,7 @@ export default function Goals() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/add/`, {
+      const response = await fetch(`${API_URL}/savings-goals/add/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +192,7 @@ export default function Goals() {
       }
 
       const response = await fetch(
-        `${API_URL}/${editingGoal.id}/update/`,
+        `${API_URL}/savings-goals/${editingGoal.id}/update/`,
         {
           method: 'PUT',
           headers: {
@@ -253,7 +252,7 @@ export default function Goals() {
       }
 
       const response = await fetch(
-        `${API_URL}/${goalId}/delete/`,
+        `${API_URL}/savings-goals/${goalId}/delete/`,
         {
           method: 'DELETE',
           headers: {

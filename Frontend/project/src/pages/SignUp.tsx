@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = "https://fincrest-ai-2.onrender.com";
 
 type SignupResponse = {
   message?: string;
